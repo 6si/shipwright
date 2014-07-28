@@ -94,7 +94,7 @@ def ensure_dir(path):
 # (path -> iter str) -> [Containers]  -> iter str
 def do_build(build_func, targets):
   """
-  Returns an iterator of that contactes the  output of building each
+  Returns an iterator  that contacts the  output of building each
   container.
   """
   
@@ -113,5 +113,5 @@ def switch(rec):
   if 'stream' in rec:
     return rec['stream']
   else:
-    # TODO: this represents an en error
+    # TODO: this represents an error
     return rec
