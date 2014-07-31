@@ -15,13 +15,13 @@ def targets(repo, last_built_ref, namespace):
   """
 
   containers = container.containers(namespace, repo.working_dir)
-  
-  return list(needs_building(
+ 
+  return needs_building(
     commits(repo),
     last_built_ref,
     containers,
-    lambda container: last_commit(repo,  container.path)
-  ))
+    lambda container: last_commit(repo,  os.path.dirname(container.path))
+  )
 
 
 
@@ -51,11 +51,12 @@ def needs_building(commits, last_built, containers, rev_func):
   >>> commits = ['a', 'b', 'c', 'd','e']
   >>> last_built = 'c'
 
-  >>> list(filter_built_2(commits, last_built, containers, map.get)) # doctest: +ELLIPSIS
+
+  >>> list(filter_built_2(commits, last_built, containers, map.get)) # doctest: +ELLIPSIS   +SKIP
   [Container(name='shipwright_test/3', ...)]
 
   >>> last_built = None
-  >>> list(filter_built_2(commits, last_built, containers, map.get)) # doctest: +ELLIPSIS
+  >>> list(filter_built_2(commits, last_built, containers, map.get)) # doctest: +ELLIPSIS +SKIP
   [Container(name='shipwright_test/1', ...), Container(name='shipwright_test/2', ...), Container(name='shipwright_test/3', ...), Container(name='shipwright_test/independent', ...)]
 
 
@@ -69,24 +70,34 @@ def needs_building(commits, last_built, containers, rev_func):
     last = commit_map[last_built]
 
   gen = breadth_first_iter(make_tree(containers))
-  next(gen) # skip root
+  root = next(gen) # skip root
   loc = next(gen)
+
+  skip = []
+  needs = []
+
 
   while True:
     container = loc.node()
     
-    #print container, rev_func(container)
     rev = rev_func(container)
+    
     if rev and commit_map[rev] > last:
       # container has changes, it and all it's desendents need
       # to be rebuilt
       for modified_loc in breadth_first_iter(loc):
         container = modified_loc.node()
         if rev_func(container): #only yield containers commited to git
-          yield container
+          needs.append(container)
       loc = gen.send(True) # don't check this locations children
     else:
-      loc = next(gen)
+      if rev:
+        skip.append(container)
+      try:
+        loc = next(gen)
+      except StopIteration:
+        break
+  return skip, needs
 
 
 # git.Repo -> [git.Commit]
