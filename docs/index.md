@@ -12,7 +12,7 @@ in **the right order** and publishes them tagged with git's revision/branch
 information so  you'll never loose track of an images origin.
 
 It's the perfect tool for building and publishing your images to places
-like Docker Hub or your own private registry. Have a look at  [motivation](motivation.md) to see why we built it and the pain points it solves for you.
+like Docker Hub or your own private registry. Have a look at  [our motivation](motivation.md) to see why we built it and the pain points it solves for you.
 
 
 Installation
