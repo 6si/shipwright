@@ -40,7 +40,7 @@ This will recurse through all the directories and looking for ones that contain 
 We have [a sample shipwright project](https://github.com/6si/shipwrigt-sample) you can use if you want to try this out right away.
 
 ```bash
-$ git clone https://github.com/6si/shipwrigt-sample.git
+$ git clone https://github.com/6si/shipwright-sample.git
 $ cd shipwright-sample
 $ shipwright solomon
 ```
