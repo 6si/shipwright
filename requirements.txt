@@ -1,5 +1,6 @@
 Flask==0.9
-docker-py==0.3.1
+git+https://github.com/docker/docker-py.git@e2ac293c1e807f1664a5037aef4dd2b50e8c7208
+
 GitPython==0.3.2.RC1
 nose
 zipper
