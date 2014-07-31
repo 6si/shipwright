@@ -111,8 +111,9 @@ def tag_containers(client, containers, last_ref, new_ref):
 @curry
 def build(client, git_rev, container):
   """
-  build the given container ensuring that it depends
-  on it's parent that's part of this build group
+  builds the given container tagged with <git_rev> and ensures that
+  it dependson it's parent if it's part of this build group (shares
+  the same namespace)
   """
 
   return client.build(
@@ -140,8 +141,6 @@ def do_build(build_func, targets):
 
 
 
-
-
 def switch(rec):
   if 'stream' in rec:
     return rec['stream']
@@ -150,5 +149,4 @@ def switch(rec):
   elif 'error' in rec:
     return '[ERROR] ' +  rec['errorDetail']['message']
   else:
-    import pdb; pdb.set_trace()
     return rec
