@@ -34,12 +34,12 @@ def curry(f):
     args = []
 
   @wraps(f)
-  def _(*a, **k):
+  def curry_(*a, **k):
     if len(a) == num_args:
       return f(*chain(args, a), **k)
     else:
       return curry(partial(f, *chain(args, a), **k))
-  return _
+  return curry_
 
 
 def compose(*fns):
@@ -48,19 +48,12 @@ def compose(*fns):
   return a function that is equivalent of f(g(h(v)))
   """
 
-  ordered = reversed(fns)
+  ordered = list(reversed(fns))
   reduce = __builtin__.reduce
-
-  def _(v):
+  
+  def compose_(v):
      return reduce(lambda v, f: f(v), ordered, v)
-  return _
-
-
-  #return partial(
-  #  reduce, 
-  #  lambda v, f: f(v),
-  #  reversed(fns)
-  #)
+  return compose_
 
 
 def composed(*fns):
@@ -121,6 +114,7 @@ def tap(fn, val):
 
 show = tap(print)
 
+print_fun = print 
 
 @curry
 def catch(fn, on_error, value):
