@@ -47,19 +47,44 @@ def compose(*fns):
   Given a list of functions such as f, g, h, that each take a single value
   return a function that is equivalent of f(g(h(v)))
   """
-  return partial(
-    reduce, 
-    lambda v, f: f(v),
-    reversed(fns)
-  )
+
+  ordered = reversed(fns)
+  reduce = __builtin__.reduce
+
+  def _(v):
+     return reduce(lambda v, f: f(v), ordered, v)
+  return _
+
+
+  #return partial(
+  #  reduce, 
+  #  lambda v, f: f(v),
+  #  reversed(fns)
+  #)
 
 
 def composed(*fns):
   """
-  Docorater to compose functions and write a doc test at the same time.
+  Decorater to compose functions and write a doc test at the same time.
+  The function being decorated exists simply to document the composition.
+
+  For example if we have these 3 functions
+
+  >>> def first(a):
+  ...   return a + 2
+
+  >>> def second(b):
+  ...   return b + 10
+
+  >>> def third(c):
+  ...   return c - 5
+
+
+  We can compose them with decorator, note the body of bogus_func
+  is never called.
 
   >>> @composed(first, second, third)
-  >>> def bogus_func(int):
+  ... def bogus_func(int):
   ...    "... insert a doc test here ..."
 
 
@@ -226,6 +251,7 @@ def filter(fn, sequence):
 
 def empty(seq):
   return len(seq) == 0
+
 
 def first(arr):
   """

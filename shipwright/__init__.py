@@ -78,25 +78,27 @@ def needs_building(commits, last_built, containers, rev_func):
 
 
   while True:
-    container = loc.node()
-    
-    rev = rev_func(container)
-    
-    if rev and commit_map[rev] > last:
-      # container has changes, it and all it's desendents need
-      # to be rebuilt
-      for modified_loc in breadth_first_iter(loc):
-        container = modified_loc.node()
-        if rev_func(container): #only yield containers commited to git
-          needs.append(container)
-      loc = gen.send(True) # don't check this locations children
-    else:
-      if rev:
-        skip.append(container)
-      try:
+    try:
+      container = loc.node()
+      
+      rev = rev_func(container)
+      
+      if rev and commit_map[rev] > last:
+        # container has changes, it and all it's desendents need
+        # to be rebuilt
+        for modified_loc in breadth_first_iter(loc):
+          container = modified_loc.node()
+          if rev_func(container): #only yield containers commited to git
+            needs.append(container)
+        loc = gen.send(True) # don't check this locations children
+      else:
+        if rev:
+          skip.append(container)
+        
         loc = next(gen)
-      except StopIteration:
-        break
+    except StopIteration:
+      break
+      
   return skip, needs
 
 
