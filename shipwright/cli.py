@@ -2,8 +2,7 @@ import sys
 import os
 import errno
 import json
-import re
-
+import string
 from functools import partial
 
 import docker
@@ -16,6 +15,8 @@ from shipwright.fn import maybe, first, _1, show, curry, compose, empty
 from shipwright.fn import flatten, fmap, juxt, identity, apply
 
 from shipwright.tar import mkcontext
+
+from shipwright.colors import rainbow
 
 def main():
  
@@ -34,6 +35,7 @@ def main():
   branch = repo.active_branch.name
 
   # last_built_ref or none 
+
   last_built_ref = maybe(compose(repo.commit, show), last_built(data_dir, branch))
 
   this_ref_str = repo.commit().hexsha[:12]
@@ -50,19 +52,14 @@ def main():
 
     tag_containers(client, current, last_built_ref.hexsha[:12], this_ref_str)
 
-  build_func = fmap(
-    json.loads,
-    build(client, this_ref_str)
-  )
+
+  built = list(do_build( 
+    highlight,  # callback function, prints to terminal
+    build(client, this_ref_str), # build function
+    targets # what needs building
+  ))
 
 
-  for line in do_build(build_func, targets):
-
-    try:
-      print line,
-    except UnicodeEncodeError:
-      pass
-  
   # now that we're built and tagged all the images with git commit,
   # tag all containers with the branch name
   tag_containers(
@@ -88,6 +85,9 @@ def last_built(data_dir, branch):
   The contents represents the last commit that we successfully built 
   docker containers. 
   """
+
+  # todo: consider just querying docker for this information
+
   ensure_dir(data_dir)
   ref_path = os.path.join(data_dir, branch)
 
@@ -136,39 +136,27 @@ def build(client, git_rev, container):
   
 
 
-def do_build(build_func, targets): 
-  return compose(
-    flatten, 
-    fmap(apply(highlight)), # eq -> highlight(container, stream)
-    fmap(juxt(identity, build_func)) # targets -> (container, stream)
-  )(targets)
 
-# (path -> iter str) -> [Containers]  -> iter str
-def _do_build(build_func, targets):
-  """
-  Returns an iterator  that concats the  output of building each
-  container.
-  """
-  
-  return (
-    switch(json.loads(line))
-    for  c in targets # c = Container
-    for line in build_func(c) 
+def do_build(show_func, build_func, targets): 
+  return fmap(
+    compose(
+      apply(parse_and_show(show_func)),
+      juxt(identity, build_func) # targets -> (container, stream)
+    ), 
+    targets
   )
 
 
-build_success = re.compile(r'^Successfully built ([a-f0-9]+)\n$')
 
+
+@fn.composed(maybe(fn._0), fn.search(r'^Successfully built ([a-f0-9]+)\s*$'))
 def success(line):
   """
   >>> success('Blah')
   >>> success('Successfully built 1234\\n')
   '1234'
   """
-  match = build_success.match(line)
-  if match:
-    return match.group(1)
-
+ 
 
 @fn.composed(fn.first, fn.filter(None), fn.map(success))
 def success_from_stream(stream):
@@ -179,18 +167,42 @@ def success_from_stream(stream):
   '1234'
   """
 
+ 
+
+def highlight(container, colors = rainbow()):
+  color_fn = next(colors)
+  def highlight_(msg):
+    print color_fn( container.name) + " | " + msg
+  return highlight_
 
 
-def highlight(container, stream):
-
-  return (
-    container.name + " | " + switch(json.loads(line))
-    for line in stream
-  )
+@curry
+def parse_and_show(show_fn, container, stream):
+  """
+  >>> from collections import namedtuple
+  >>> stream = iter([dict(stream="hi mom"), dict(stream="hi world"), dict(stream='Successfully built 1234\\n')])
+  >>> stream = [dict(stream="hi mom"), dict(stream="hi world"), dict(stream='Successfully built 1234\\n')]
   
+  >>> container = namedtuple('Container', 'name')('blah')
+  >>> show2(container, stream)
+  blah | hi mom
+  blah | hi world
+  blah | Successfully built 1234
+  <BLANKLINE>
+  (Container(name='blah'), '1234')
+  """
+  f = compose(
+    fn.tap(show_fn(container)),
+    partial(string.strip, chars='\n'), 
+    switch,
+    json.loads
+  )
+   
+  return container, success_from_stream(fmap(f,stream))
 
 
 def switch(rec):
+
   if 'stream' in rec:
     return rec['stream']
 
