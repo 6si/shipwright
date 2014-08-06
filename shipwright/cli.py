@@ -4,6 +4,7 @@ import errno
 import json
 import string
 from functools import partial
+from itertools import cycle
 
 import docker
 import git
@@ -136,12 +137,30 @@ def build(client, git_rev, container):
   
 
 
+# (container->(str -> None)) -> (container -> stream) -> [targets] -> [(container, docker_image_id)] 
+def do_build(show_func, build_func, targets):
+  """
+  Generic function for building multiple containers while
+  notifying a callback function with output produced.
 
-def do_build(show_func, build_func, targets): 
+  Given a list of targets it builds the target with the given
+  build_func while streaming the output through the given
+  show_func.
+
+  Returns an iterator of (container, docker_image_id) pairs as 
+  the final output.
+
+  Building a container can take sometime so  the results are returned as 
+  an iterator in case the caller wants to use restults in between builds.
+
+  The consequences of this is you must either call it as part of a for loop
+  or pass it to a function like list() which can consume an iterator.
+
+  """
   return fmap(
     compose(
-      apply(parse_and_show(show_func)),
-      juxt(identity, build_func) # targets -> (container, stream)
+      apply(parse_and_show(show_func)), # (container,stream) => (container, docker_image_id)
+      juxt(identity, build_func) # container => (container, stream)
     ), 
     targets
   )
@@ -169,7 +188,8 @@ def success_from_stream(stream):
 
  
 
-def highlight(container, colors = rainbow()):
+colors = cycle(rainbow())
+def highlight(container):
   color_fn = next(colors)
   def highlight_(msg):
     print color_fn( container.name) + " | " + msg
@@ -192,10 +212,10 @@ def parse_and_show(show_fn, container, stream):
   (Container(name='blah'), '1234')
   """
   f = compose(
-    fn.tap(show_fn(container)),
-    partial(string.strip, chars='\n'), 
-    switch,
-    json.loads
+    fn.tap(show_fn(container)), #'string' -> <side effect> -> 'string'
+    partial(string.strip, chars='\n'), # 'string\n' -> 'string'
+    switch, # {...} -> 'string\n'
+    json.loads #'{...}' -> {...}
   )
    
   return container, success_from_stream(fmap(f,stream))
