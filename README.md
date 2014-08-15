@@ -37,7 +37,7 @@ Once installed, simply change to a project of yours that contains multiple Docke
 This will recurse through all the directories and looking for ones that contain a Dockerfile. Shipwright will build these dockefiles in order and by default tag them with `<docker hub username>/<dirname>`
 
 
-We have [a sample shipwright project](https://github.com/6si/shipwrigt-sample) you can use if you want to try this out right away.
+We have [a sample shipwright project](https://github.com/6si/shipwright-sample) you can use if you want to try this out right away.
 
 ```bash
 $ git clone https://github.com/6si/shipwright-sample.git
