@@ -4,6 +4,7 @@
 # http://functionaltalks.org/2013/05/27/brian-lonsdorf-hey-underscore-youre-doing-it-wrong/
 # to understand why
 
+from __future__ import absolute_import
 from __future__ import print_function
 import __builtin__
 
@@ -287,6 +288,9 @@ _7 = get(7)
 _8 = get(8)
 _9 = get(9)
 
+@curry
+def getitem(key, hashmap):
+  return hashmap[key]
 
 
 # object functions
@@ -296,7 +300,7 @@ def identity(obj):
 
 @curry
 def getattr(attr, obj):
-  return getattr(obj, attr)
+  return __builtin__.getattr(obj, attr)
 
 
 @curry

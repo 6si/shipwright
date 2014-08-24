@@ -20,10 +20,11 @@ def read(*filenames, **kwargs):
 
 long_description = read('README.md')
 
+exec(open('shipwright/version.py').read())
 
 setup(
     name='shipwright',
-    version="0.0.1",
+    version=version,
     url='http://github.com/6si/shipwright/',
     license='Apache Software License',
     author='Scott Robertson',

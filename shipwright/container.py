@@ -1,7 +1,9 @@
+from __future__ import absolute_import
+
 import os
 from collections import namedtuple
 
-Container = namedtuple('Container', 'name,path,parent')
+Container = namedtuple('Container', 'name,dir_path,path,parent')
 
 
 # namespace -> path -> [Container]
@@ -37,6 +39,7 @@ def container_from_path(namespace, path):
 
   return Container(
     name = '/'.join([namespace,name(path)]),
+    dir_path = os.path.dirname(path),
     path = path,
     parent = parent(path)
   )
