@@ -24,8 +24,9 @@ Shipwright is a simple python script you can install with pip
 
 *NOTE*: Until [docker-py 0.4.1](https://github.com/docker/docker-py) ships you'll need to use `--process-dependency-links` with pip versions 1.5 or greater.
 
-  $ pip install --process-dependency-links shipwright
-
+```
+$ pip install --process-dependency-links shipwright
+```
 
 Quickstart
 ==========
