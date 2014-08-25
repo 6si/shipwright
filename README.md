@@ -47,10 +47,10 @@ We have [a sample shipwright project](https://github.com/6si/shipwright-sample) 
 ```bash
 $ git clone https://github.com/6si/shipwright-sample.git
 $ cd shipwright-sample
-$ shipwright solomon
+$ shipwright shipwright
 ```
 
-**NOTE: you can use any username you'd like while building locally. Nothing is published unless you include the `--publish` flag. However  it's probably a good idea to substitue `solomon` in the above example with you (or your organizations) official docker hub username.**
+**NOTE: you can use any username you'd like while building locally. In the above example we use `shipwright'. Nothing is published unless you include the `--publish` flag. For your own projects it's probably a good idea to substitue `shipwright` in the above example with you (or your organizations) official docker hub username.**
 
 **PRO TIP: if you build allot and  set the `SW_NAMESPACE` environment variable to your username**
 
@@ -60,7 +60,7 @@ Shipwright really shines when you switch git branches.
 
 ```bash
 $ git checkout new_feature
-$ shipwright solomon
+$ shipwright shipwright
 ```
 
 Notice that shipwright only rebuilt  the shared library and service1 ignoring the other projects because they have a common git ancestory. Running `docker images` however shows that all the images in the git repository have been tagged with the latest git revision and branch. 
