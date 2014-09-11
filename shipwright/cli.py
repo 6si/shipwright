@@ -26,6 +26,7 @@ from __future__ import print_function
 
 import sys
 import os
+import json
 from itertools import cycle
 
 from docopt import docopt
@@ -34,17 +35,29 @@ import git
 
 from shipwright.version import version
 from shipwright import Shipwright
-from shipwright.fn import maybe, first, _1, show
 
 
 from shipwright.colors import rainbow
 
 def main():
   arguments = docopt(__doc__, version='Shipwright ' + version)
-  namespace = arguments['DOCKER_HUB_ACCOUNT'] or os.environ.get('SW_NAMESPACE')
-  if namespace is None:
+  repo = git.Repo(os.getcwd())
+
+  try:
+    config = json.load(open(
+      os.path.join(repo.working_dir, '.shipwright.json')
+    ))
+  except OsError:
+    config = {
+      'namespace': arguments['DOCKER_HUB_ACCOUNT'] or os.environ.get('SW_NAMESPACE')
+    }
+
+
+
+  if config['namespace'] is None:
     exit(
-      "Please specify your docker hub account on  "
+      "Please specify your docker hub account in\n"
+      "the .shipwright.json config file,\n "
       "the command line or set SW_NAMESPACE.\n"
       "Run shipwright --help for more information."
     )
@@ -53,14 +66,14 @@ def main():
     exit('Oh gosh, Sorry!\n "--publish" is not yet implemented')
   base_url = os.environ.get('DOCKER_HOST','unix://var/run/docker.sock')
 
-  repo = git.Repo(os.getcwd())
+
   client = docker.Client(
     base_url=base_url,
     version='1.9',
     timeout=10
   )
 
-  for t, docker_commit in Shipwright(namespace,repo,client).build(highlight):
+  for t, docker_commit in Shipwright(config,repo,client).build(highlight):
     print("Built {}".format( t.name))
 
 def exit(msg):
