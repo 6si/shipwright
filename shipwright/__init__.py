@@ -8,21 +8,26 @@ from . import commits
 from . import docker
 from . import dependencies
 
-from .container import containers as list_containers
+from .container import containers as list_containers, container_name
 from .fn import curry, compose
 
 
 class Shipwright(object):
-  def __init__(self, namespace, source_control, docker_client):
+  def __init__(self, config, source_control, docker_client):
     self.source_control = source_control
     self.docker_client = docker_client
-    self.namespace = namespace
+    self.namespace = config['namespace']
+    self.config = config
 
   def targets(self):
     client = self.docker_client
 
     containers = list_containers(
-      self.namespace,
+      container_name(
+        self.namespace, 
+        self.config.get('names',{}),
+        self.source_control.working_dir
+      ),
       self.source_control.working_dir
     )
  

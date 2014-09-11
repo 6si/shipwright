@@ -3,11 +3,38 @@ from __future__ import absolute_import
 import os
 from collections import namedtuple
 
+from .fn import curry
+
 Container = namedtuple('Container', 'name,dir_path,path,parent')
+
+@curry
+def container_name(namespace, name_map, root_path, path):
+  """
+  Determines the name of the container from the config file
+  or based on it's parent directory name.
+
+  >>> container_name('shipwright', {'blah':'foo/blah'}, 'x/', 'x/blah/Dockerfile')
+  foo/blah
+
+  >>> container_name('shipwright', {'blah':'foo/blah'}, 'x/', 'x/baz/Dockerfile')
+  shipwright/baz
+
+  """
+
+  docker_repo = None
+  if path.startswith(root_path):
+    relative_path = os.path.dirname(path[len(root_path):])
+    docker_repo = name_map.get(relative_path)
+
+  if docker_repo is not None:
+    return docker_repo
+  else:
+    # try to guess the name from the path
+    return '/'.join([namespace,name(path)])
 
 
 # namespace -> path -> [Container]
-def containers(namespace, path):
+def containers(name_func, path):
   """
   Given a namespace and a path return a list of Containers. Each
   container's name will be based on the namespace and directory
@@ -18,13 +45,13 @@ def containers(namespace, path):
   [Container(...), Container(...), Container(...)]
   """
   return [
-    container_from_path(namespace, container_path)
+    container_from_path(name_func, container_path)
     for  container_path in build_files(path)
   ]
 
 
 #namespace -> path -> Container(name, path, parent)
-def container_from_path(namespace, path):
+def container_from_path(name_func, path):
   """
   Given a path to a Dockerfile parse the file and return 
   a coresponding Container
@@ -38,7 +65,7 @@ def container_from_path(namespace, path):
   """
 
   return Container(
-    name = '/'.join([namespace,name(path)]),
+    name = name_func(path),
     dir_path = os.path.dirname(path),
     path = path,
     parent = parent(path)
