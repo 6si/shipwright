@@ -98,6 +98,12 @@ class Shipwright(object):
       branch
     )
 
+    docker.tag_containers(
+      self.docker_client, 
+      current + [t._replace(last_built_ref=this_ref_str) for t in targets], 
+      "latest"
+    )
+
 
     return built
 

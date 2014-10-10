@@ -47,7 +47,7 @@ def main():
     config = json.load(open(
       os.path.join(repo.working_dir, '.shipwright.json')
     ))
-  except OsError:
+  except OSError:
     config = {
       'namespace': arguments['DOCKER_HUB_ACCOUNT'] or os.environ.get('SW_NAMESPACE')
     }
@@ -64,7 +64,7 @@ def main():
 
   if arguments["--publish"]:
     exit('Oh gosh, Sorry!\n "--publish" is not yet implemented')
-  base_url = os.environ.get('DOCKER_HOST','unix://var/run/docker.sock')
+  base_url = os.environ.get('DOCKER_HOST','unix:///var/run/docker.sock')
 
 
   client = docker.Client(
