@@ -34,7 +34,7 @@ def bundle_docker_dir(modify_docker_func, path):
   ./bogus1
   ./bogus2
 
-  >>> import tar 
+  >>> from shipwright import tar 
   >>> path = join(tar.TEST_ROOT, 'Dockerfile')
   >>> open(path, 'w').write('blah')
   
@@ -61,6 +61,7 @@ def bundle_docker_dir(modify_docker_func, path):
   ['bogus1', 'bogus2', 'Dockerfile']
 
   And if we exctart the Dockerfile it starts with 'bogus header'
+
   >>> ti = t.extractfile('Dockerfile')
   >>> ti.read().startswith('bogus header')
   True
@@ -106,15 +107,24 @@ def tag_parent(tag, docker_content):
  
   >>> tag_parent("blah", "# comment\\nauthor bob barker\\nFroM somerepo/image\\n\\nRUN echo hi mom\\n")
   '# comment\\nauthor bob barker\\nFroM somerepo/image:blah\\n\\nRUN echo hi mom\\n'
+
+
+  >>> tag_parent("blah", "# comment\\nauthor bob barker\\nFroM localhost:5000/somerepo/image\\n\\nRUN echo hi mom\\n")
+  '# comment\\nauthor bob barker\\nFroM localhost:5000/somerepo/image:blah\\n\\nRUN echo hi mom\\n'
+
+  >>> tag_parent("blah", "# comment\\nauthor bob barker\\nFroM docker.example.com:5000/somerepo/image\\n\\nRUN echo hi mom\\n")
+  '# comment\\nauthor bob barker\\nFroM docker.example.com:5000/somerepo/image:blah\\n\\nRUN echo hi mom\\n'
  
   """
 
-  return re.sub(
-    '^(\s*from\s+)(\w+/\w+)(\s*)$', 
-    "\\1\\2:" + tag + "\\3", 
+  v = re.sub(
+    '^(\s*from\s+)(([\w.]+(\:\d+)?\/)?\w+/\w+)(\s*)$', 
+    "\\1\\2:" + tag + "\\5", 
     docker_content, 
     flags=re.MULTILINE+re.I
   )
+
+  return v
  
 
 # str -> str -> fileobj
