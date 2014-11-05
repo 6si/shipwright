@@ -74,7 +74,18 @@ def bundle_docker_dir(modify_docker_func, path):
 
   # tar up the directory minus the Dockerfile, 
   # TODO: respect .dockerignore
-  fileobj = utils.tar(path, ['Dockerfile'])
+
+  try:
+    ignore = filter(None,[
+      p.strip() for p in open(join(path, '.dockerignore')).readlines()
+    ])
+  except IOError:
+    ignore = []
+
+  ignore.append('Dockerfile')
+
+  fileobj = utils.tar(path, ignore)
+
 
   # append a dockerfile after running it through a mutation
   # function first
