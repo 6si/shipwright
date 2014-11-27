@@ -1,4 +1,5 @@
 FROM python:2.7-onbuild
-RUN cd /usr/src/app && python setup.py install
+RUN cd /usr/src/app && python setup.py develop
 WORKDIR /code
-CMD /usr/local/bin/shipwright
+#ENTRYPOINT shipwright 
+CMD shipwright
