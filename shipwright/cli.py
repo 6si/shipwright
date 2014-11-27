@@ -3,13 +3,22 @@
 Shipwright -- Builds shared Docker images within a common git repository.
 
 Usage:
-  shipwright [options] [DOCKER_HUB_ACCOUNT] [--publish] 
+  shipwright [build|publish|publish-no-build|purge] [TARGET...]
 
 Options:
 
- --help           Show all help information 
+ --help           Show all help information
 
  -H DOCKER_HOST   Override DOCKER_HOST if it's set in the environment.
+
+
+Target Specifiers:
+  shipwright <target>   -- build a target and everything it depends on
+  shipwright ^<target>  -- build a target it's dependencies and 
+                           everything that depends on it
+  shipwright =<target>  -- build without dependencies
+  shipwright +<target>  -- force build a target
+  shipwright -<target>  -- exclude a target
 
 
 Environment Variables:
@@ -38,9 +47,16 @@ from shipwright import Shipwright
 
 
 from shipwright.colors import rainbow
+from shipwright.fn import _0
+
+
+# todo: only do this if python 2.7
+import ssl
+
+
 
 def main():
-  arguments = docopt(__doc__, version='Shipwright ' + version)
+  arguments = docopt(__doc__, options_first=True, version='Shipwright ' + version)
   repo = git.Repo(os.getcwd())
 
   try:
@@ -62,19 +78,52 @@ def main():
       "Run shipwright --help for more information."
     )
 
-  if arguments["--publish"]:
-    exit('Oh gosh, Sorry!\n "--publish" is not yet implemented')
+  
   base_url = os.environ.get('DOCKER_HOST','unix:///var/run/docker.sock')
+  
+  DOCKER_TLS_VERIFY = bool(os.environ.get('DOCKER_TLS_VERIFY', False))
+ 
+  if not DOCKER_TLS_VERIFY:
+    tls_config = False
+  else:
+    cert_path = os.environ.get('DOCKER_CERT_PATH')
+    if cert_path:
+      ca_cert_path = os.path.join(cert_path,'ca.pem')
+      client_cert=(
+        os.path.join(cert_path, 'cert.pem'), 
+        os.path.join(cert_path, 'key.pem')
+      )
 
+    tls_config = docker.tls.TLSConfig(
+      ssl_version = ssl.PROTOCOL_TLSv1,
+      client_cert = client_cert,
+      verify=ca_cert_path,
+      assert_hostname=False
+    )
+    if base_url.startswith('tcp://'):
+      base_url = 'https://' + base_url[6:]
 
   client = docker.Client(
     base_url=base_url,
-    version='1.9',
-    timeout=10
+    version='1.12',
+    timeout=10,
+    tls=tls_config
   )
 
-  for t, docker_commit in Shipwright(config,repo,client).build(highlight):
-    print("Built {}".format( t.name))
+  # {'publish': false, 'purge': true, ...} = 'purge'
+  command_name = _0([
+    command for (command, enabled) in arguments.items()
+    if command.islower() and enabled
+  ]) or "build"
+
+  command = getattr(Shipwright(config,repo,client), command_name)
+
+  for action, container, docker_commit in command(highlight):
+    print("{action} {name}:{commit}".format(
+      action = action,
+      name = container.name,
+      commit = docker_commit
+    ))
 
 def exit(msg):
   print(msg)
@@ -87,5 +136,4 @@ def highlight(container):
   def highlight_(msg):
     print(color_fn( container.name) + " | " + msg)
   return highlight_
-
 

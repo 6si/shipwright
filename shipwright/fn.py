@@ -131,6 +131,10 @@ def catch(fn, on_error, value):
   except Exception, e:
     return on_error(e,value)
 
+#
+@curry
+def not_(fn, a):
+  return not fn(a)
 
 # binary comparisons
 @curry
@@ -156,6 +160,15 @@ def gt(a,b):
 @curry
 def gte(a,b):
   return a >= b
+
+@curry
+def contains(a,b):
+  return b in a
+
+
+@curry
+def is_(a,b):
+  return a is b
 
 # logic functions
 
@@ -275,6 +288,10 @@ def get(index, arr):
     return None
   else:
     return arr[index]
+
+
+def const(val):
+  return lambda x: val
 
 # Convienance getters 
 _0 = get(0)

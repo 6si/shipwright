@@ -3,14 +3,16 @@ from __future__ import absolute_import
 from collections import namedtuple
 
 from . import build
+from . import purge
 from . import fn
 from . import commits
 from . import docker
 from . import dependencies
 
 from .container import containers as list_containers, container_name
-from .fn import curry, compose
+from .fn import curry, compose, not_, contains
 
+from . import fn
 
 class Shipwright(object):
   def __init__(self, config, source_control, docker_client):
@@ -19,10 +21,9 @@ class Shipwright(object):
     self.namespace = config['namespace']
     self.config = config
 
-  def targets(self):
-    client = self.docker_client
 
-    containers = list_containers(
+  def containers(self):
+    return list_containers(
       container_name(
         self.namespace, 
         self.config.get('names',{}),
@@ -30,6 +31,11 @@ class Shipwright(object):
       ),
       self.source_control.working_dir
     )
+
+  def targets(self):
+    client = self.docker_client
+
+    containers = self.containers()
  
     commit_map = commits.mkmap(self.source_control)
 
@@ -61,7 +67,7 @@ class Shipwright(object):
     
 
 
-  def build(self, callback):
+  def build(self, mk_show_fn):
 
     branch = self.source_control.active_branch.name
     this_ref_str = commits.hexsha(self.source_control.commit())
@@ -82,8 +88,7 @@ class Shipwright(object):
 
 
     built = build.do_build( 
-      callback,  
-      #build(client, this_ref_str), # build function
+      mk_show_fn,  
       self.docker_client,
       this_ref_str,
       targets # what needs building
@@ -104,8 +109,87 @@ class Shipwright(object):
       "latest"
     )
 
+    return (
+      ("Built", container, ref)
+      for container, ref in built
+    )
 
-    return built
+
+  def purge(self, mk_show_fn):
+    """
+    Experimental feature use with caution. For each branch removes all 
+    previous built images expept for the last built.
+    """
+
+    containers = self.containers()
+
+    # [Branch] -> [(string -> Int)]
+    maps = map(
+      lambda b: commits.mkmap(self.source_control, b), 
+      self.source_control.branches
+    )
+
+    # branches = Union([Branch, Git Ref, Rel Num],[Branch, Branch, -1])
+    # containers = [Container, Git Ref | Branch ]
+    # all = Join(branches.ref = containers.ref)
+    # maximums = Join(
+    #  all.ref = Select(branch,  Git Ref, max(rel num), GroupBy(all, "branch")).ref
+    
+
+
+    tags_by_container = docker.tags_from_containers(self.docker_client, containers)
+
+    # [(string -> Int)] -> [[Tag]] -> [[(last_built, relative_id)]]
+    z = map(
+      lambda commit_map:last_built(commit_map, tags_by_container),
+      maps
+    )
+
+    #([Int],[Int]) -> [(Int,Int)]
+    a = map(
+      lambda t: max(zip(*reversed(t))),
+      z
+    )
+
+    branches = map(ttag, self.source_control.branches) + ['latest']
+    #for branch, ref in zip(branches,a):
+    #  yield "Latest", branch, ref
+
+    # [(last_built, relative_id)] -> set Tag
+    keep =  set(p[0] for  p in fn.flatten(map(
+      lambda x:zip(*x),
+      z
+    )) if p[1] not in(-1, None))
+
+
+    for c,t in zip(containers, tags_by_container):
+      for tag in t:
+        if (tag not in branches) and (tag not in keep):
+          image = "{name}:{tag}".format(
+            name = c.name,
+            tag  = tag
+          )
+          self.docker_client.remove_image(image, force=True, noprune=False)
+          yield "Removed", c, tag
+
+
+
+
+# move me
+ttag = compose(
+  docker.encode_tag,
+  fn.getattr('name')
+)
+
+
+  
+def last_built(commit_map, tags):
+  last_built_ref, last_built_rel = zip(*map(
+    commits.max_commit(commit_map),  
+    tags
+  ))
+  return last_built_ref, last_built_rel
+
 
 
 class Target(namedtuple('Target', 'container, last_built_ref, last_built_rel, current_rel')):

@@ -4,11 +4,11 @@ from .fn import curry, juxt, maybe, identity
 
 # Tag = str
 # git.Repo -> {Tag:Int}
-def mkmap(repo):
+def mkmap(repo, branch=None):
   """
   Return a function suitable for mapping symbolic names to a relative number.
   """
-  return { hexsha(rev):i  for i, rev in enumerate(commits(repo)) }.get
+  return { hexsha(rev):i  for i, rev in enumerate(commits(repo, branch)) }.get
 
 
 # if it's a ref return the first 12 hex digits, if it's None return None
@@ -17,8 +17,8 @@ hexsha = maybe(lambda ref: ref.hexsha[:12])
 
 
 # git.Repo -> [git.Commit]
-def commits(repo):
-  return reversed(list(repo.iter_commits()))
+def commits(repo, branch=None):
+  return reversed(list(repo.iter_commits(branch)))
 
 @curry
 def relative_commit(commit_map, tag):
