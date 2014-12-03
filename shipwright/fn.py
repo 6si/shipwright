@@ -253,6 +253,10 @@ def fmap(fn, sequence):
 
 
 @curry
+def flat_map(f, arr):
+  return flatten(fmap(f, arr))
+
+@curry
 def filter(fn, sequence):
   return __builtin__.filter(fn, sequence)
 
@@ -305,9 +309,18 @@ _7 = get(7)
 _8 = get(8)
 _9 = get(9)
 
+
+# Dict functions
 @curry
 def getitem(key, hashmap):
   return hashmap[key]
+
+@curry
+def merge(d1, d2):
+  d = d1.copy()
+  d.update(d2)
+  return d
+
 
 
 # object functions

@@ -3,7 +3,7 @@
 Shipwright -- Builds shared Docker images within a common git repository.
 
 Usage:
-  shipwright [build|publish|publish-no-build|purge] [TARGET...]
+  shipwright [build|push|publish-no-build|purge] [TARGET...]
 
 Options:
 
@@ -48,6 +48,7 @@ from shipwright import Shipwright
 
 from shipwright.colors import rainbow
 from shipwright.fn import _0
+
 
 
 # todo: only do this if python 2.7
@@ -118,17 +119,26 @@ def main():
 
   command = getattr(Shipwright(config,repo,client), command_name)
 
-  for action, container, docker_commit in command(highlight):
-    print("{action} {name}:{commit}".format(
-      action = action,
-      name = container.name,
-      commit = docker_commit
-    ))
+  for event in command():
+    show_fn = mk_show(event)
+    show_fn(switch(event))
 
 def exit(msg):
   print(msg)
   sys.exit(1)
  
+def memo(f, arg, memos={}):
+  if arg in memos:
+    return memos[arg]
+  else:
+    memos[arg] = f(arg)
+    return memos[arg]
+
+def mk_show(evt):
+  if evt['event'] == 'build_msg' or 'error' in evt:
+    return memo(highlight,evt['container'])
+  else:
+    return print
 
 colors = cycle(rainbow())
 def highlight(container):
@@ -137,3 +147,27 @@ def highlight(container):
     print(color_fn( container.name) + " | " + msg)
   return highlight_
 
+def switch(rec):
+
+  if 'stream' in rec:
+    return rec['stream'].strip('\n')
+
+  elif 'status' in rec:
+    if rec['status'].startswith('Downloading'):
+      term = '\r'
+    else:
+      term = '\n'
+
+    return '[STATUS] {0}: {1}{2}'.format(
+      rec.get('id', ''), 
+      rec['status'],
+      term
+    )
+  elif 'error' in rec:
+    return '[ERROR] {0}\n'.format(rec['errorDetail']['message'])
+  elif rec['event'] == 'tag':
+    return 'Tagging {image} to {name}:{tag}'.format(name=rec['container'].name, **rec)
+  elif rec['event'] == 'removed':
+    return 'Untagging {image}:{tag}'.format(**rec)
+  else:
+    return rec

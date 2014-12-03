@@ -3,13 +3,14 @@ from __future__ import absolute_import
 from collections import namedtuple
 
 from . import build
-from . import purge
 from . import fn
 from . import commits
 from . import docker
 from . import dependencies
 
-from .container import containers as list_containers, container_name
+from . import query
+
+from .container import containers as list_containers, container_name, Container
 from .fn import curry, compose, not_, contains
 
 from . import fn
@@ -67,7 +68,7 @@ class Shipwright(object):
     
 
 
-  def build(self, mk_show_fn):
+  def build(self):
 
     branch = self.source_control.active_branch.name
     this_ref_str = commits.hexsha(self.source_control.commit())
@@ -80,115 +81,61 @@ class Shipwright(object):
       # of the containers that do need to be built can refer
       # to the skiped ones by user/image:<last_built_ref> which makes
       # them part of the same group.
-      docker.tag_containers(
+      for evt in docker.tag_containers(
         self.docker_client, 
         current,
         this_ref_str
-      )
+      ): yield evt
 
-
-    built = build.do_build( 
-      mk_show_fn,  
-      self.docker_client,
-      this_ref_str,
-      targets # what needs building
-    )
+    for evt in  build.do_build( 
+          self.docker_client,
+          this_ref_str,
+          targets # what needs building
+    ): yield evt
 
     # now that we're built and tagged all the images with git commit,
     # (either during the process of building or forwarding the tag)
     # tag all containers with the branch name
-    docker.tag_containers(
+    for evt in docker.tag_containers(
       self.docker_client, 
       current + [t._replace(last_built_ref=this_ref_str) for t in targets], 
       branch
-    )
+    ): yield evt
 
-    docker.tag_containers(
+    for evt in docker.tag_containers(
       self.docker_client, 
       current + [t._replace(last_built_ref=this_ref_str) for t in targets], 
       "latest"
-    )
-
-    return (
-      ("Built", container, ref)
-      for container, ref in built
-    )
+    ): yield evt
 
 
-  def purge(self, mk_show_fn):
+
+  def purge(self):
     """
     Experimental feature use with caution. For each branch removes all 
     previous built images expept for the last built.
     """
 
     containers = self.containers()
+ 
+    d = query.dataset(self.source_control, self.docker_client, containers)
+    for row in d.query('''
+      select image, tag 
+      from image left join latest_commit on latest_commit.commit = image.tag 
+      where latest_commit.commit is null
+    '''):
+      image, tag = row
+      try:
+        self.docker_client.remove_image("{}:{}".format(image,tag), force=True, noprune=False)
+        yield dict(event="removed", image=image, tag=tag)
+      except Exception, e:
+        yield dict(
+          event="error", 
+          error=e,
+          container=Container(image,None,None,None), 
+          errorDetail=dict(message=str(e))
+        )
 
-    # [Branch] -> [(string -> Int)]
-    maps = map(
-      lambda b: commits.mkmap(self.source_control, b), 
-      self.source_control.branches
-    )
-
-    # branches = Union([Branch, Git Ref, Rel Num],[Branch, Branch, -1])
-    # containers = [Container, Git Ref | Branch ]
-    # all = Join(branches.ref = containers.ref)
-    # maximums = Join(
-    #  all.ref = Select(branch,  Git Ref, max(rel num), GroupBy(all, "branch")).ref
-    
-
-
-    tags_by_container = docker.tags_from_containers(self.docker_client, containers)
-
-    # [(string -> Int)] -> [[Tag]] -> [[(last_built, relative_id)]]
-    z = map(
-      lambda commit_map:last_built(commit_map, tags_by_container),
-      maps
-    )
-
-    #([Int],[Int]) -> [(Int,Int)]
-    a = map(
-      lambda t: max(zip(*reversed(t))),
-      z
-    )
-
-    branches = map(ttag, self.source_control.branches) + ['latest']
-    #for branch, ref in zip(branches,a):
-    #  yield "Latest", branch, ref
-
-    # [(last_built, relative_id)] -> set Tag
-    keep =  set(p[0] for  p in fn.flatten(map(
-      lambda x:zip(*x),
-      z
-    )) if p[1] not in(-1, None))
-
-
-    for c,t in zip(containers, tags_by_container):
-      for tag in t:
-        if (tag not in branches) and (tag not in keep):
-          image = "{name}:{tag}".format(
-            name = c.name,
-            tag  = tag
-          )
-          self.docker_client.remove_image(image, force=True, noprune=False)
-          yield "Removed", c, tag
-
-
-
-
-# move me
-ttag = compose(
-  docker.encode_tag,
-  fn.getattr('name')
-)
-
-
-  
-def last_built(commit_map, tags):
-  last_built_ref, last_built_rel = zip(*map(
-    commits.max_commit(commit_map),  
-    tags
-  ))
-  return last_built_ref, last_built_rel
 
 
 
