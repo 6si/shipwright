@@ -35,7 +35,7 @@ setup(
         'requests>=2.4.0',
         'docker-py==0.5.3',
         'GitPython==0.3.2.RC1',
-
+        'splicer'
     ],
     author_email='scott@6sense.com',
     description='Multi docker image build management',

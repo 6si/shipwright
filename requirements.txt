@@ -2,3 +2,4 @@ docker-py==0.5.3
 requests==2.4.3
 GitPython==0.3.2.RC1
 zipper
+git+https://github.com/trivio/splicer.git@refactor/schema
