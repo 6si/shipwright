@@ -50,9 +50,9 @@ $ cd shipwright-sample
 $ shipwright shipwright
 ```
 
-**NOTE: you can use any username you'd like while building locally. In the above example we use `shipwright'. Nothing is published unless you include the `--publish` flag. For your own projects it's probably a good idea to substitue `shipwright` in the above example with you (or your organizations) official docker hub username.**
+**NOTE: you can use any username you'd like while building locally. In the above example we use 'shipwright'. Nothing is published unless you include the `--publish` flag. For your own projects it's probably a good idea to substitute 'shipwright` in the above example with you (or your organization's) official docker hub username.**
 
-**PRO TIP: if you build allot and  set the `SW_NAMESPACE` environment variable to your username**
+**PRO TIP: if you build a lot, consider setting the `SW_NAMESPACE` environment variable to your username**
 
 Running `shipwright` a second time nothing will return immediatly without doing anything as Shipwright is smart enough to know nothing has changed.
 
@@ -63,7 +63,7 @@ $ git checkout new_feature
 $ shipwright shipwright
 ```
 
-Notice that shipwright only rebuilt  the shared library and service1 ignoring the other projects because they have a common git ancestory. Running `docker images` however shows that all the images in the git repository have been tagged with the latest git revision and branch. 
+Notice that shipwright only rebuilt the shared library and service1 ignoring the other projects because they have a common git ancestory. Running `docker images` however shows that all the images in the git repository have been tagged with the latest git revision and branch. 
 
 In fact as Shipwright builds  containers it rewrites the Dockerfiles so that they require the base images with tags from the current git revision. This ensures that the entire build is deterministic and reproducable.
 
