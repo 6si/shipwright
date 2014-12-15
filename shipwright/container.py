@@ -14,10 +14,10 @@ def container_name(namespace, name_map, root_path, path):
   or based on it's parent directory name.
 
   >>> container_name('shipwright', {'blah':'foo/blah'}, 'x/', 'x/blah/Dockerfile')
-  foo/blah
+  'foo/blah'
 
   >>> container_name('shipwright', {'blah':'foo/blah'}, 'x/', 'x/baz/Dockerfile')
-  shipwright/baz
+  'shipwright/baz'
 
   """
 
