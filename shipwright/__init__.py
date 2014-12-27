@@ -1,11 +1,14 @@
 from __future__ import absolute_import
 
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 from . import build
+from . import push
+from . import purge
 from . import fn
 from . import commits
 from . import docker
+
 from . import dependencies
 
 from . import query
@@ -36,7 +39,7 @@ class Shipwright(object):
   def targets(self):
     client = self.docker_client
 
-    containers = self.containers()
+    containers = self.containers() 
  
     commit_map = commits.mkmap(self.source_control)
 
@@ -57,7 +60,7 @@ class Shipwright(object):
  
     # [[Container], [Tag], [Int], [Int]] -> [Target]
     return [
-      Target(container, built_ref, built_rel, current_rel)
+      Target(container, built_ref, built_rel, current_rel, None)
 
       for container, built_ref, built_rel, current_rel in  zip(
         containers, last_built_ref, last_built_rel, current_rel
@@ -68,12 +71,15 @@ class Shipwright(object):
     
 
 
-  def build(self):
+  def build(self, specifiers):
 
     branch = self.source_control.active_branch.name
     this_ref_str = commits.hexsha(self.source_control.commit())
     
-    current, targets = dependencies.needs_building(self.targets())
+    tree = dependencies.eval(specifiers,self.targets())
+
+
+    current, targets = dependencies.needs_building(tree)
 
     if current:
       # these containers weren't effected by the latest git changes
@@ -109,37 +115,52 @@ class Shipwright(object):
     ): yield evt
 
 
-
-  def purge(self):
+  def purge(self, specifiers):
     """
-    Experimental feature use with caution. For each branch removes all 
-    previous built images expept for the last built.
+    Removes all stale images. 
+
+    A stale image is an image that is not the latest of at 
+    least one branch.
     """
 
     containers = self.containers()
- 
     d = query.dataset(self.source_control, self.docker_client, containers)
-    for row in d.query('''
-      select image, tag 
-      from image left join latest_commit on latest_commit.commit = image.tag 
+
+    stale_images = d.query('''
+      select image.image, tag 
+      from 
+        image 
+        left join latest_commit on latest_commit.commit = image.tag 
       where latest_commit.commit is null
-    '''):
-      image, tag = row
-      try:
-        self.docker_client.remove_image("{}:{}".format(image,tag), force=True, noprune=False)
-        yield dict(event="removed", image=image, tag=tag)
-      except Exception, e:
-        yield dict(
-          event="error", 
-          error=e,
-          container=Container(image,None,None,None), 
-          errorDetail=dict(message=str(e))
-        )
+    ''')
+
+    return purge.do_purge(self.docker_client, stale_images)
+ 
+
+  def push(self, specifiers):
+    """
+    Pushes the latest images for the current branch to the repository.
+
+    """
+
+    tree = dependencies.eval(specifiers,self.targets())
+
+    containers = dependencies.brood(tree)
+
+    branch = self.source_control.active_branch.name
+    d = query.dataset(self.source_control, self.docker_client, containers)
+
+    images = d.query("""
+      select image, commit 
+      from latest_commit 
+      where 
+        branch = ?0 and image is not null
+    """).execute(branch)
+    return push.do_push(self.docker_client, images)
 
 
 
-
-class Target(namedtuple('Target', 'container, last_built_ref, last_built_rel, current_rel')):
+class Target(namedtuple('Target', 'container, last_built_ref, last_built_rel, current_rel, children')):
   @property
   def name(self):
     return self.container.name

@@ -2,6 +2,7 @@
 # query - uses splicer to simplify complex data manipulations
 #
 
+from splicer import Field
 import splicer
 from splicer.adapters.dict_adapter import DictAdapter
 
@@ -36,10 +37,20 @@ def branches(source_control):
     for rel, commit in enumerate(commits.commits(source_control, branch))
   ]
 
+def maxwhen(state, new_v, new_test):
+  return max(state, (new_v, new_test))
+  
 
 def dataset(source_control, docker_client, containers):
 
   dataset = splicer.DataSet()
+  dataset.add_aggregate(
+    "maxwhen",
+    func=maxwhen ,
+    returns=Field(name="min", type="STRING"),
+    initial=(None,None),
+    finalize=lambda state: state[0]
+  )
 
   # data collected at the start of the program
   static_data = DictAdapter(
@@ -57,11 +68,11 @@ def dataset(source_control, docker_client, containers):
 
   dataset.create_view(
     'latest_commit',
-    'select branch.branch, branch.commit, max(branch.rel_commit) as rel_commit '
-    'from image join branch on image.tag = branch.commit group by branch '
+    'select branch.branch, image, maxwhen(branch.commit, branch.rel_commit) as commit, max(branch.rel_commit) as rel_commit '
+    'from image join branch on image.tag = branch.commit group by branch, image '
     'union all '
     # splicer doesn't have select distinct yet.. this is the equiv 
-    'select branch, branch as commit, -1 from branch '
+    'select branch, null as image, branch as commit, -1 from branch '
     'group by branch'
   )
   return dataset

@@ -9,54 +9,43 @@ from .fn import curry
 
 
 
-def eval(specifiers, targets):
-  transforms = []
-
-  for spec in specifiers:
-    if spec.startswith('='):
-      # '=blah' -> exact('blah')
-      transforms.append(exact(spec[1:]))
-    elif spec.startswith('^'):
-      # '^blah's -> descendants('blah')
-      transforms.append(descendants(spec[1:]))
-    elif spec.startswith('-'):
-      # '-blah's -> exclude('blah')
-      transforms.append(exclude(spec[1:]))
-    else:
-      transforms.append(upto(spec))
-
-  tree = make_tree(targets)
-
-  for trans in transforms:
-    tree = trans(tree)
-
-  return tree
-
-
-
 def union(inclusions, tree):
-  return make_tree(reduce(lambda p,f: p | set(f(tree)), inclusions, set()))
+  targets = reduce(
+    lambda p,f: p | set(f(tree)),  # for each tree func run it, convert to set
+    inclusions, 
+    set()
+  )
 
-def eval2(specifiers, targets):
+  return make_tree(targets)
+
+
+# [(tree -> [ImageNames])] -> [Containers]
+def eval(specifiers, targets):
+  """
+  Given a list of partially applied functions that
+  take a tree and return a list of image names.
+
+  First apply all non-exclude functinons with the tree built from targets
+  creating a union of the results.
+
+  Then returns the results of applying each exclusion functinon
+  in order.
+
+  """
   inclusions = []
   exclusions = []
 
   for spec in specifiers:
-    if spec.startswith('='):
-      # '=blah' -> exact('blah')
-      inclusions.append(exact(spec[1:]))
-    elif spec.startswith('^'):
-      # '^blah's -> descendants('blah')
-      inclusions.append(descendants(spec[1:]))
-    elif spec.startswith('-'):
-      # '-blah's -> exclude('blah')
-      exclusions.append(exclude(spec[1:]))
+    if spec.func_name == 'exclude':
+      exclusions.append(spec)
     else:
-      inclusions.append(upto(spec))
+      inclusions.append(spec)
 
-  tree = union(inclusions, make_tree(targets))
+  tree = make_tree(targets)
+  if inclusions:
+    tree = union(inclusions, tree)
 
-  return fn.compose(exclusions)(tree)
+  return fn.compose(*exclusions)(tree)
 
 
 
@@ -224,10 +213,12 @@ def is_child(parent, target):
   if not isinstance(target, Root):
     return target.parent == parent
 
+# (a -> b) -> Loc a -> b
 @curry
 def fmap(func, loc):
   return func(loc.node())
 
+# Loc -> [Target]
 def lineage(loc):
   results = []
   while loc.path:
@@ -236,12 +227,13 @@ def lineage(loc):
     loc = loc.up()
   return results
 
+
+# Loc -> [Target]
 def brood(loc):
   return [loc.node() for loc in breadth_first_iter(loc)][1:]
 
-#all = make_tree
 
-
+# Target -> Tree -> [Target]
 @curry
 def upto(target, tree):
   """
@@ -255,23 +247,25 @@ def upto(target, tree):
 
   loc = tree.find(fmap(is_target(target)))
  
-  return make_tree(lineage(loc))
+  return lineage(loc) #make_tree(lineage(loc))
 
+# Target -> Tree -> [Target]
 @curry
-def descendants(target, tree):
+def dependents(target, tree):
   """
   Returns a target it's dependencies and 
   everything that depends on it
 
   >>> from .dependencies import targets
-  >>> tree = descendants('shipwright_test/2', make_tree(targets))
+  >>> tree = dependents('shipwright_test/2', make_tree(targets))
   >>> _names(tree)
   ['shipwright_test/1', 'shipwright_test/2', 'shipwright_test/3']
   """
 
   loc = tree.find(fmap(is_target(target)))
-  return make_tree(lineage(loc) + brood(loc))
+  return lineage(loc) + brood(loc)
 
+# Target -> Tree -> [Target]
 @curry
 def exact(target, tree):
   """
@@ -286,12 +280,13 @@ def exact(target, tree):
 
   loc = tree.find(fmap(is_target(target)))
 
-  return make_tree([loc.node()])
+  return [loc.node()]
 
+# Target -> Tree -> Tree
 @curry
 def exclude(target, tree):
   """
-  Returns everything but the target and it's descendants. If target
+  Returns everything but the target and it's dependents. If target
   is not found the whole tree is returned.
 
   >>> from .dependencies import targets
@@ -306,6 +301,8 @@ def exclude(target, tree):
     return loc.remove().top()
   else: 
     return tree
+
+
 
 
 ### Test methods ###

@@ -1,9 +1,16 @@
-
+# -*- coding: utf-8 -*-
 """
 Shipwright -- Builds shared Docker images within a common git repository.
 
+
 Usage:
-  shipwright [build|push|publish-no-build|purge] [TARGET...]
+  shipwright [options] [build|push [--no-build]|purge]
+             [TARGET]...
+             [-d TARGET]...
+             [-e TARGET]...
+             [-u TARGET]...
+             [-x TARGET]...
+            
 
 Options:
 
@@ -11,14 +18,18 @@ Options:
 
  -H DOCKER_HOST   Override DOCKER_HOST if it's set in the environment.
 
+ 
+Specifiers:
 
-Target Specifiers:
-  shipwright <target>   -- build a target and everything it depends on
-  shipwright ^<target>  -- build a target it's dependencies and 
-                           everything that depends on it
-  shipwright =<target>  -- build without dependencies
-  shipwright +<target>  -- force build a target
-  shipwright -<target>  -- exclude a target
+  -d --dependents=TARGET  Build TARGET and all its dependents
+
+  -e --exact=TARGET       Build TARGET only - may fail if
+                          dependencies have not been built 
+
+  -u --upto=TARGET        Build TARGET and it dependencies
+
+  -x --exclude=TARGET     Build everything but TARGET and 
+                          its dependents
 
 
 Environment Variables:
@@ -28,6 +39,50 @@ Environment Variables:
 
   DOCKER_HOST : Same URL as used by the docker client to connect to 
     the docker daemon. 
+
+Examples:
+
+  Assuming adependencies tree that looks like this.
+  
+  ubuntu
+    └─── base
+        └─── shared
+        |     ├─── service1  
+        |     |     └─── service2
+        |     └─── service3
+        └─── independent
+
+
+  Build everything: 
+
+    $ shipwright
+
+  Build base, shared and service1:
+
+    $ shipwright service1
+
+  Build base, shared and service1, service2:
+
+    $ shipwright -d service1
+
+  Use exclude to build base, shared and service1, service2:
+
+    $ shipwright -x service3 -x independent
+
+  Build base, independent, shared and service3
+
+    $ shipwright -x service1
+
+  Build base, independent, shared and service1, service2:
+
+    $ shipwright -d service1 -u independent
+
+  Note that specfying a TARGET is the same as -u so the following
+  command is equivalent to the one above.
+
+  $ shipwright -d service1 independent
+
+
 """
 from __future__ import absolute_import
 from __future__ import print_function
@@ -36,18 +91,20 @@ from __future__ import print_function
 import sys
 import os
 import json
-from itertools import cycle
+from itertools import cycle,chain
 
 from docopt import docopt
 import docker
 import git
 
-from shipwright.version import version
 from shipwright import Shipwright
+from shipwright.version import version
 
 
+from shipwright.dependencies import dependents, exact, exclude, upto
 from shipwright.colors import rainbow
 from shipwright.fn import _0
+from shipwright import fn
 
 
 
@@ -57,7 +114,7 @@ import ssl
 
 
 def main():
-  arguments = docopt(__doc__, options_first=True, version='Shipwright ' + version)
+  arguments = docopt(__doc__, options_first=False, version='Shipwright ' + version)
   repo = git.Repo(os.getcwd())
 
   try:
@@ -84,6 +141,7 @@ def main():
   
   DOCKER_TLS_VERIFY = bool(os.environ.get('DOCKER_TLS_VERIFY', False))
  
+  # todo: replace with from docker.utils import kwargs_from_env
   if not DOCKER_TLS_VERIFY:
     tls_config = False
   else:
@@ -111,6 +169,23 @@ def main():
     tls=tls_config
   )
 
+  # specifiers = chain(
+  #   [exact(t) for t in arguments.pop('--exact')],
+  #   [dependents(t) for t in arguments.pop('--dependents')],
+  #   [exclude(t) for t in arguments.pop('--exclude')],
+  #   [upto(t) for t in arguments.pop('--upto')],
+  #   [upto(t) for t in arguments.pop('TARGET')]
+  # )
+
+  specifiers = chain(
+    map(exact, arguments.pop('--exact')),
+    map(dependents, arguments.pop('--dependents')),
+    map(exclude, arguments.pop('--exclude')),
+    map(upto, arguments.pop('--upto')),
+    map(upto, arguments.pop('TARGET'))
+  )
+
+
   # {'publish': false, 'purge': true, ...} = 'purge'
   command_name = _0([
     command for (command, enabled) in arguments.items()
@@ -119,7 +194,8 @@ def main():
 
   command = getattr(Shipwright(config,repo,client), command_name)
 
-  for event in command():
+
+  for event in command(specifiers):
     show_fn = mk_show(event)
     show_fn(switch(event))
 
@@ -135,16 +211,20 @@ def memo(f, arg, memos={}):
     return memos[arg]
 
 def mk_show(evt):
-  if evt['event'] == 'build_msg' or 'error' in evt:
-    return memo(highlight,evt['container'])
+  if evt['event'] in ('build_msg', 'push') or 'error' in evt:
+    return memo(
+      highlight, 
+      fn.maybe(fn.getattr('name'), evt.get('container'))
+      or evt.get('image')
+      )
   else:
     return print
 
 colors = cycle(rainbow())
-def highlight(container):
+def highlight(name):
   color_fn = next(colors)
   def highlight_(msg):
-    print(color_fn( container.name) + " | " + msg)
+    print(color_fn(name) + " | " + msg)
   return highlight_
 
 def switch(rec):
@@ -156,7 +236,7 @@ def switch(rec):
     if rec['status'].startswith('Downloading'):
       term = '\r'
     else:
-      term = '\n'
+      term = ''
 
     return '[STATUS] {0}: {1}{2}'.format(
       rec.get('id', ''), 

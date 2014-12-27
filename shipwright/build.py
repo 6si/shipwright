@@ -1,7 +1,5 @@
 import json
 import string
-from functools import partial
-
 
 from . import fn
 
