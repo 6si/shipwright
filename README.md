@@ -81,10 +81,7 @@ $ cd shipwright-sample
 $ shipwright 
 ```
 
-
-**NOTE: you can use any username you'd like while building locally. In the above example we use 'shipwright'. Nothing is published unless you include the `--publish` flag. For your own projects it's probably a good idea to substitute 'shipwright` in the above example with you (or your organization's) official docker hub username.**
-
-**PRO TIP: if you build a lot, consider setting the `SW_NAMESPACE` environment variable to your username**
+**NOTE: you can use any username you'd like while building locally. In the above example we use `shipwright`. Nothing is published unless you use the `push` command. For your own projects  substitue `shipwright` in the above example with you (or your organizations) official docker hub username or private respository.**
 
 Notice that if you run the `shipwright` a second time it will return immediatly without doing anything. Shipwright is smart enough to know nothing has changed.
 
