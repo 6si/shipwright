@@ -154,7 +154,8 @@ class Shipwright(object):
     tree = dependencies.eval(specifiers,self.targets())
 
     push_tree = compose(
-      self.push_targets,
+      push.do_push(self.docker_client),
+      # [Target] -> [[ImageName, Tag]]
       fn.map(fn.juxt(fn.getattr('name'), fn.getattr('last_built_ref'))),
       expand(branch)
     )
@@ -163,12 +164,6 @@ class Shipwright(object):
       return bind(self.build_tree, push_tree, tree)
     else:
       return push_tree(tree)
-
-  def push_targets(self, targets):
-    return push.do_push(
-      self.docker_client,
-      targets
-    )
 
 
   def z_push(self,tree):
@@ -188,6 +183,15 @@ class Shipwright(object):
 
 @curry
 def expand(branch, tree):
+  """
+  Flattens the tree to the list and doubles each entry.
+
+  Ex.
+
+  > expand(make_tree([Target(..., last_built_ref='c1234567890a'...)]))
+  [Target(..., last_built_ref='c1234567890a'),Target(..., last_built_ref='develop'...)]
+
+  """
   return fn.flat_map(
     fn.juxt(fn.identity, fn.replace(last_built_ref=branch)),
     dependencies.brood(tree)
@@ -196,8 +200,13 @@ def expand(branch, tree):
 def unit(tree):
   return tree, iter(())
 
+
+# (Tree -> [Target]) -> (Tree -> [Target]) -> [Target]
 @curry
 def bind(a,b,tree):
+  """
+  Glues two Shipwright commands (functions) together.  
+  """
 
   iterator = a(tree)
   
