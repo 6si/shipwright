@@ -31,7 +31,7 @@ And the directory structure would look something like
 
 
 
-However Docker leaves it up to you to build these containers in the right order.  If you checked out this code directly from git and tried to build
+However, Docker leaves it up to you to build these containers in the right order.  If you checked out this code directly from git and tried to build
 `service1` it would fail. It depends on `6sense/shared` which hasn't been built yet. In fact a typical session by hand would looks something like this.
 
 
@@ -44,9 +44,9 @@ However Docker leaves it up to you to build these containers in the right order.
 	
 Now that's annoying, but manageable. As experinced Unix developers, we started off with the naive approach of using a `Makefile` to build all the containers in the right order.
 
-But we kept running into other problems. We like to develop using feature branches. Often during the same day we'd switch back and forth between several git branches, make changes to the various containers, rebuild, test think everything was hunky dory. Until we'd run into strange errors. Only  after several frustrating hours of debuging would we realize we pushed  containers from mixed branches or built containers in the wrong order.
+But we kept running into other problems. We like to develop using feature branches. Often during the same day we'd switch back and forth between several git branches, make changes to the various containers, rebuild, test think everything was hunky dory. Until we'd run into strange errors. Only after several frustrating hours of debuging would we realize we pushed containers from mixed branches or built containers in the wrong order.
 
-The solution to that problem was to include the git branch name in all the containers we built as a tag, but also meant we  had to update the Dockerfile and ensure the `FROM` included the right tag as in `FROM 6sense/shared:<some branch>`. But this to had problems, if you had two developers working on the same branch.
+The solution to that problem was to include the git branch name in all the containers we built as a tag, but also meant we  had to update the Dockerfile and ensure the `FROM` included the right tag as in `FROM 6sense/shared:<some branch>`. But this too had problems, if you had two developers working on the same branch.
 
 Our build scripts kept growing ever more elaborate. Then it dawned on us that most of the information needed to build and tag containers properly is already present in some form either in the Dockerfile or within git itself.
 
