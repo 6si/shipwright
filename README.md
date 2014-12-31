@@ -23,9 +23,6 @@ Shipwright is a simple python script you can install with pip
 	$ pip install shipwright
 
 
-```
-$ pip install --process-dependency-links shipwright
-```
 
 Quickstart
 ==========
