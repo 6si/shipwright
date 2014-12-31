@@ -252,6 +252,7 @@ def fmap(fn, sequence):
   return itertools_imap(fn,sequence)
 
 
+# (a -> [b]) -> [a] -> [b]
 @curry
 def flat_map(f, arr):
   return flatten(fmap(f, arr))
@@ -332,6 +333,11 @@ def identity(obj):
 def getattr(attr, obj):
   return __builtin__.getattr(obj, attr)
 
+# namedtuples
+def replace(**kw):
+  def _replace(nt):
+    return nt._replace(**kw)
+  return _replace
 
 @curry
 def debug(fn, value):
