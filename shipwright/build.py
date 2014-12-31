@@ -1,15 +1,18 @@
 import json
 import string
-from functools import partial
-
 
 from . import fn
 
-from .fn import apply,  compose, composed, curry, identity,juxt, maybe, fmap
+from .fn import (
+  apply,  compose, composed, curry, identity,juxt, maybe, fmap,
+  flat_map, merge
+)
+
 from .tar import mkcontext
 
+
 # (container->(str -> None)) -> (container -> stream) -> [targets] -> [(container, docker_image_id)] 
-def do_build(show_func, client, git_rev, targets):
+def do_build(client, git_rev, targets):
   """
   Generic function for building multiple containers while
   notifying a callback function with output produced.
@@ -28,14 +31,9 @@ def do_build(show_func, client, git_rev, targets):
   or pass it to a function like list() which can consume an iterator.
 
   """
-  return map(
-    compose(
-      apply(parse_and_show(show_func)), # (container,stream) => (container, docker_image_id)
-      juxt(identity, build(client, git_rev)) # container => (container, stream)
-    ), 
-    targets
-  )
 
+  return flat_map(build(client, git_rev), targets)
+  
 
 @curry
 def build(client, git_rev, container):
@@ -45,14 +43,20 @@ def build(client, git_rev, container):
   the same namespace)
   """
 
-  return client.build(
-    fileobj = mkcontext(git_rev, container.dir_path),
-    custom_context = True,
-    stream=True,
-    tag = '{0}:{1}'.format(container.name, git_rev)
+  return fn.fmap(
+    compose(
+      merge(dict(event="build_msg", container=container, rev=git_rev)),
+      json.loads
+    ),
+    client.build(
+      fileobj = mkcontext(git_rev, container.dir_path),
+      rm=True,
+      custom_context = True,
+      stream=True,
+      tag = '{0}:{1}'.format(container.name, git_rev)
+    )
   )
   
-
 
 @fn.composed(maybe(fn._0), fn.search(r'^Successfully built ([a-f0-9]+)\s*$'))
 def success(line):
@@ -72,49 +76,4 @@ def success_from_stream(stream):
   '1234'
   """
 
-@curry
-def parse_and_show(show_fn, container, stream):
-  """
-  >>> from collections import namedtuple
-  >>> stream = iter([dict(stream="hi mom"), dict(stream="hi world"), dict(stream='Successfully built 1234\\n')])
-  >>> stream = [dict(stream="hi mom"), dict(stream="hi world"), dict(stream='Successfully built 1234\\n')]
-  
-  >>> container = namedtuple('Container', 'name')('blah')
-  >>> show2(container, stream)
-  blah | hi mom
-  blah | hi world
-  blah | Successfully built 1234
-  <BLANKLINE>
-  (Container(name='blah'), '1234')
-  """
 
-  f = compose(
-    fn.tap(show_fn(container)), #'string' -> <side effect> -> 'string'
-    partial(string.strip, chars='\n'), # 'string\n' -> 'string'
-    switch, # {...} -> 'string\n'
-    json.loads #'{...}' -> {...}
-  )
-   
-  return container, success_from_stream(fmap(f,stream))
-
-
-def switch(rec):
-
-  if 'stream' in rec:
-    return rec['stream']
-
-  elif 'status' in rec:
-    if rec['status'].startswith('Downloading'):
-      term = '\r'
-    else:
-      term = '\n'
-
-    return '[STATUS] {0}: {1}{2}'.format(
-      rec.get('id', ''), 
-      rec['status'],
-      term
-    )
-  elif 'error' in rec:
-    return '[ERROR] {0}\n'.format(rec['errorDetail']['message'])
-  else:
-    return rec

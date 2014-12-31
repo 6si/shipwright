@@ -1,17 +1,62 @@
 from __future__ import absolute_import
 
-from collections import  defaultdict
+from collections import  defaultdict, namedtuple
 
 import zipper
+
+from . import fn
+from .fn import curry
+
+
+
+def union(inclusions, tree):
+  targets = reduce(
+    lambda p,f: p | set(f(tree)),  # for each tree func run it, convert to set
+    inclusions, 
+    set()
+  )
+
+  return make_tree(targets)
+
+
+# [(tree -> [ImageNames])] -> [Containers]
+def eval(specifiers, targets):
+  """
+  Given a list of partially applied functions that
+  take a tree and return a list of image names.
+
+  First apply all non-exclude functinons with the tree built from targets
+  creating a union of the results.
+
+  Then returns the results of applying each exclusion functinon
+  in order.
+
+  """
+  inclusions = []
+  exclusions = []
+
+  for spec in specifiers:
+    if spec.func_name == 'exclude':
+      exclusions.append(spec)
+    else:
+      inclusions.append(spec)
+
+  tree = make_tree(targets)
+  if inclusions:
+    tree = union(inclusions, tree)
+
+  return fn.compose(*exclusions)(tree)
+
+
 
 # Ref = git.Ref
 # item = <anything>
 # [Ref] -> Ref -> [Containers] -> [item]
-def needs_building(targets):
+def needs_building(tree):
   """
   """
   
-  gen = breadth_first_iter(make_tree(targets))
+  gen = breadth_first_iter(tree)
   root = next(gen) # skip root
   loc = next(gen)
 
@@ -44,7 +89,7 @@ def needs_building(targets):
   return skip, needs
 
 
-
+Root = namedtuple('Root', 'name, children')
 
 # [Container] -> Loc Container
 
@@ -53,61 +98,76 @@ def make_tree(containers):
   Converts a list of containers into a tree represented by a zipper.
   see http://en.wikipedia.org/wiki/Zipper_(data_structure)
 
-  >>> containers = [
-  ...   Container('shipwright_test/2', 'path1/Dockerfile', 'shipwright_test/1'),
-  ...   Container('shipwright_test/1', 'path1/Dockerfile', 'ubuntu'),
-  ...   Container('shipwright_test/3', 'path1/Dockerfile', 'shipwright_test/2'),
-  ...   Container('shipwright_test/independent', 'path1/Dockerfile', 'ubuntu'),
-  ... ]
+  >>> from .dependencies import targets
 
-  >>> root = make_tree(containers)
+  >>> root = make_tree(targets)
+  >>> root.node().name is None # doctest: +ELLIPSIS
+  True
 
-  >>> root  # doctest: +ELLIPSIS
-  <zipper.Loc(None) ...>
-
-  >>> root.children()  # doctest: +ELLIPSIS
-  [Container(name='shipwright_test/1', ...), Container(name='shipwright_test/independent', ...)]
+  >>> _names(root)
+  ['shipwright_test/1', 'shipwright_test/independent', 'shipwright_test/2', 'shipwright_test/3']
 
   >>> root.down().node()  # doctest: +ELLIPSIS
-  Container(name='shipwright_test/1', ...)
+  Target(container=Container(name='shipwright_test/1', ...)
 
-  >>> root.down().children()  # doctest: +ELLIPSIS
-  [Container(name='shipwright_test/2', ...)]
+  >>> _names(root.down())  # doctest: +ELLIPSIS
+  ['shipwright_test/2', 'shipwright_test/3']
+  
 
   >>> root.down().down().node()  # doctest: +ELLIPSIS
-  Container(name='shipwright_test/2', ...)
+  Target(container=Container(name='shipwright_test/2', ...)
 
-  >>> root.down().down().children()  # doctest: +ELLIPSIS
-  [Container(name='shipwright_test/3', ...)]
+  >>> _names(root.down().down())  # doctest: +ELLIPSIS
+  ['shipwright_test/3']
   
-  >>> root.down().right().node() # doctest: +ELLIPSIS
-  Container(name='shipwright_test/independent', ...)
+  >>> root.down().right().node().name # doctest: +ELLIPSIS
+  'shipwright_test/independent'
 
   """
 
-  container_map = {c.container.name:c for c in containers}
-  graph = defaultdict(list)
-
-  # TODO: check for cycles
+  root = Root(None, ())
+  tree =  zipper.zipper(root, is_branch, children, make_node)
+  
   for c in containers:
-    graph[container_map.get(c.container.parent)].append(c)
+    t = c._replace(children=())
 
-  # sort children by name, to make testing eaiser
-  for node, children in graph.items():
-    graph[node] = sorted(children)
+    loc = tree.find(fmap(is_target(t.parent)))
+    if loc:
+      tree = loc.insert(t).top()
+    else: 
+      tree = tree.edit(reroot, t)
 
-  def children(item):
-    return graph[item]
+  return tree
 
-  def is_branch(item):
-    return len(children(item)) > 0
+def reroot(root, branch):
+  """
+  Adds the branch into the root, sweeping up children that
+  may have been inserted before it.
+  """
+  root_children = []
+  branch_children = []
+  for child in root.children:
+    if child.parent == branch.name:
+      branch_children.append(child)
+    else:
+      root_children.append(child)
 
-  def make_node(node, children):
-    return node
+  branch = branch._replace(children=tuple(branch_children))
+  root_children.append(branch)
 
-  root_loc =  zipper.zipper(None, is_branch, children, make_node)
+  return root._replace(children=tuple(root_children))
 
-  return root_loc
+
+def children(item):
+  return item.children
+
+def is_branch(item):
+  return True
+
+def make_node(node, children):
+  # keep children sorted to make testing easier
+  ch = tuple(sorted(children,key=fn.getattr('name')))
+  return node._replace(children=ch)
 
 
 def breadth_first_iter(loc):
@@ -115,16 +175,12 @@ def breadth_first_iter(loc):
   Given a loctation node (from a zipper) walk it's children in breadth first
   order.
 
-  >>> containers = [
-  ...   Container('shipwright_test/2', 'path1/Dockerfile', 'shipwright_test/1'),
-  ...   Container('shipwright_test/1', 'path1/Dockerfile', 'ubuntu'),
-  ...   Container('shipwright_test/3', 'path1/Dockerfile', 'shipwright_test/2'),
-  ...   Container('shipwright_test/independent', 'path1/Dockerfile', 'ubuntu'),
-  ... ]
+  >>> from .dependencies import targets
 
-  >>> tree = make_tree(containers)
-  >>> [loc.node() for loc in breadth_first_iter(tree)] # doctest: +ELLIPSIS
-  [None, Container(name='shipwright_test/1', ...), Container(name='shipwright_test/independent', ...), Container(name='shipwright_test/2', ...), Container(name='shipwright_test/3', ...)]
+  >>> tree = make_tree(targets)
+
+  >>> [loc.node().name for loc in breadth_first_iter(tree)] # doctest: +ELLIPSIS
+  [None, 'shipwright_test/1', 'shipwright_test/independent', 'shipwright_test/2', 'shipwright_test/3']
 
   """
 
@@ -139,4 +195,152 @@ def breadth_first_iter(loc):
       tocheck.append(child)
       child = child.right()
 
+
+@curry
+def is_target(name, target):
+  """
+  >>> from . import Target
+  >>> from . import Container
+
+  >>> target = Target(Container('test', None, None, None), None, None, None, None)
+  >>> is_target('test', target)
+  True
+  """
+  return target.name == name
+
+@curry
+def is_child(parent, target):
+  if not isinstance(target, Root):
+    return target.parent == parent
+
+# (a -> b) -> Loc a -> b
+@curry
+def fmap(func, loc):
+  return func(loc.node())
+
+# Loc -> [Target]
+def lineage(loc):
+  results = []
+  while loc.path:
+    node = loc.node()
+    results.append(node)
+    loc = loc.up()
+  return results
+
+
+# Loc -> [Target]
+def brood(loc):
+  return [loc.node() for loc in breadth_first_iter(loc)][1:]
+
+
+# Target -> Tree -> [Target]
+@curry
+def upto(target, tree):
+  """
+  returns target and everything it depends on
+
+  >>> from .dependencies import targets
+  >>> tree = upto('shipwright_test/2', make_tree(targets))
+  >>> _names(tree)
+  ['shipwright_test/1', 'shipwright_test/2']
+  """
+
+  loc = tree.find(fmap(is_target(target)))
+ 
+  return lineage(loc) #make_tree(lineage(loc))
+
+# Target -> Tree -> [Target]
+@curry
+def dependents(target, tree):
+  """
+  Returns a target it's dependencies and 
+  everything that depends on it
+
+  >>> from .dependencies import targets
+  >>> tree = dependents('shipwright_test/2', make_tree(targets))
+  >>> _names(tree)
+  ['shipwright_test/1', 'shipwright_test/2', 'shipwright_test/3']
+  """
+
+  loc = tree.find(fmap(is_target(target)))
+  return lineage(loc) + brood(loc)
+
+# Target -> Tree -> [Target]
+@curry
+def exact(target, tree):
+  """
+  Returns only the target.
+
+  >>> from .dependencies import targets
+  >>> tree = exact('shipwright_test/2', make_tree(targets))
+  >>> _names(tree)
+  ['shipwright_test/2']
   
+  """
+
+  loc = tree.find(fmap(is_target(target)))
+
+  return [loc.node()]
+
+# Target -> Tree -> Tree
+@curry
+def exclude(target, tree):
+  """
+  Returns everything but the target and it's dependents. If target
+  is not found the whole tree is returned.
+
+  >>> from .dependencies import targets
+  >>> tree = exclude('shipwright_test/2', make_tree(targets))
+  >>> _names(tree) # doctest: +ELLIPSIS
+  ['shipwright_test/1', 'shipwright_test/independent']
+
+  """
+
+  loc = tree.find(fmap(is_target(target)))
+  if loc:
+    return loc.remove().top()
+  else: 
+    return tree
+
+
+
+
+### Test methods ###
+def _names(tree):
+ return [n.name for n in brood(tree)]
+
+def setup_module(module):
+  from .container import Container
+  from . import Target
+
+  module.targets = [
+    Target(
+      Container('shipwright_test/2', 'path2/', 'path2/Dockerfile', 'shipwright_test/1'),
+      'abc',
+      3,
+      3,
+      None
+    ),
+    Target(
+      Container('shipwright_test/1', 'path1/', 'path1/Dockerfile', 'ubuntu'),
+      'abc',
+      3,
+      3,
+      None
+    ),
+    Target(
+      Container('shipwright_test/3', 'path3/', 'path3/Dockerfile', 'shipwright_test/2'),
+      'abc',
+      3,
+      3,
+      None
+    ),
+    Target(
+      Container('shipwright_test/independent', 'independent', 'path1/Dockerfile', 'ubuntu'),
+      'abc',
+      3,
+      3,
+      None
+    )
+  ]
+

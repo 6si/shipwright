@@ -36,13 +36,20 @@ def tags_from_containers(client, containers):
     containers
   )
 
+def encode_tag(tag):
+  return tag.replace('/','-')
+
+def decode_tag(tag):
+  return tag.replace('-','/')
+
 
 def tag_containers(client, containers,  new_ref):
-  
-  tag = new_ref.replace('/','-')
   for container in containers:
+    tag = encode_tag(new_ref)
+    image = container.name + ":" + container.last_built_ref
     client.tag(
-      container.name + ":" + container.last_built_ref, 
+      image, 
       container.name,
       tag=tag
     )
+    yield dict(event="tag", container=container, image=image, tag=tag)

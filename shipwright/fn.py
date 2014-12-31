@@ -131,6 +131,10 @@ def catch(fn, on_error, value):
   except Exception, e:
     return on_error(e,value)
 
+#
+@curry
+def not_(fn, a):
+  return not fn(a)
 
 # binary comparisons
 @curry
@@ -156,6 +160,15 @@ def gt(a,b):
 @curry
 def gte(a,b):
   return a >= b
+
+@curry
+def contains(a,b):
+  return b in a
+
+
+@curry
+def is_(a,b):
+  return a is b
 
 # logic functions
 
@@ -239,6 +252,11 @@ def fmap(fn, sequence):
   return itertools_imap(fn,sequence)
 
 
+# (a -> [b]) -> [a] -> [b]
+@curry
+def flat_map(f, arr):
+  return flatten(fmap(f, arr))
+
 @curry
 def filter(fn, sequence):
   return __builtin__.filter(fn, sequence)
@@ -276,6 +294,10 @@ def get(index, arr):
   else:
     return arr[index]
 
+
+def const(val):
+  return lambda x: val
+
 # Convienance getters 
 _0 = get(0)
 _1 = get(1)
@@ -288,9 +310,18 @@ _7 = get(7)
 _8 = get(8)
 _9 = get(9)
 
+
+# Dict functions
 @curry
 def getitem(key, hashmap):
   return hashmap[key]
+
+@curry
+def merge(d1, d2):
+  d = d1.copy()
+  d.update(d2)
+  return d
+
 
 
 # object functions
@@ -302,6 +333,11 @@ def identity(obj):
 def getattr(attr, obj):
   return __builtin__.getattr(obj, attr)
 
+# namedtuples
+def replace(**kw):
+  def _replace(nt):
+    return nt._replace(**kw)
+  return _replace
 
 @curry
 def debug(fn, value):
