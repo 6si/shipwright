@@ -72,12 +72,14 @@ class Shipwright(object):
 
 
   def build(self, specifiers):
+    
+    tree = dependencies.eval(specifiers, self.targets())
+    return self.build_tree(tree)
 
+
+  def build_tree(self, tree):
     branch = self.source_control.active_branch.name
     this_ref_str = commits.hexsha(self.source_control.commit())
-    
-    tree = dependencies.eval(specifiers,self.targets())
-
 
     current, targets = dependencies.needs_building(tree)
 
@@ -99,21 +101,27 @@ class Shipwright(object):
           targets # what needs building
     ): yield evt
 
+    all_images = current + [
+      t._replace(last_built_ref=this_ref_str)
+      for t in targets
+    ]
+    
     # now that we're built and tagged all the images with git commit,
     # (either during the process of building or forwarding the tag)
     # tag all containers with the branch name
     for evt in docker.tag_containers(
       self.docker_client, 
-      current + [t._replace(last_built_ref=this_ref_str) for t in targets], 
+      all_images, 
       branch
     ): yield evt
 
     for evt in docker.tag_containers(
       self.docker_client, 
-      current + [t._replace(last_built_ref=this_ref_str) for t in targets], 
+      all_images, 
       "latest"
     ): yield evt
 
+    raise StopIteration(all_images)
 
   def purge(self, specifiers):
     """
@@ -137,14 +145,33 @@ class Shipwright(object):
     return purge.do_purge(self.docker_client, stale_images)
  
 
-  def push(self, specifiers):
+  def push(self, specifiers, build=True):
     """
     Pushes the latest images for the current branch to the repository.
 
     """
-
+    branch = self.source_control.active_branch.name
     tree = dependencies.eval(specifiers,self.targets())
 
+    push_tree = compose(
+      self.push_targets,
+      fn.map(fn.juxt(fn.getattr('name'), fn.getattr('last_built_ref'))),
+      expand(branch)
+    )
+
+    if build:
+      return bind(self.build_tree, push_tree, tree)
+    else:
+      return push_tree(tree)
+
+  def push_targets(self, targets):
+    return push.do_push(
+      self.docker_client,
+      targets
+    )
+
+
+  def z_push(self,tree):
     containers = dependencies.brood(tree)
 
     branch = self.source_control.active_branch.name
@@ -158,6 +185,30 @@ class Shipwright(object):
     """).execute(branch)
     return push.do_push(self.docker_client, images)
 
+
+@curry
+def expand(branch, tree):
+  return fn.flat_map(
+    fn.juxt(fn.identity, fn.replace(last_built_ref=branch)),
+    dependencies.brood(tree)
+  )
+
+def unit(tree):
+  return tree, iter(())
+
+@curry
+def bind(a,b,tree):
+
+  iterator = a(tree)
+  
+  while True:
+    try:
+      yield next(iterator)
+    except StopIteration, e:
+      x1 = e.args[0]
+      for evt in b(dependencies.make_tree(x1)):
+        yield evt
+      break
 
 
 class Target(namedtuple('Target', 'container, last_built_ref, last_built_rel, current_rel, children')):

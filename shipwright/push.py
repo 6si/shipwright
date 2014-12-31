@@ -4,6 +4,7 @@ from .fn import (
   compose,  curry,  fmap, flat_map, merge
 )
 
+@curry
 def do_push(client, images):
   return flat_map(push(client), images)
   

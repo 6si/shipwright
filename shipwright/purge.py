@@ -1,3 +1,4 @@
+from .container import Container
 def do_purge(client, images):
  for row in images:
     image, tag = row
