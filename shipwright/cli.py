@@ -16,6 +16,9 @@ Options:
 
  --help           Show all help information
 
+ --dump-file=FILE Save raw events to json to FILE. Useful for
+                  debugging.           
+
  -H DOCKER_HOST   Override DOCKER_HOST if it's set in the environment.
 
  
@@ -115,6 +118,8 @@ import ssl
 
 def main():
   arguments = docopt(__doc__, options_first=False, version='Shipwright ' + version)
+
+
   repo = git.Repo(os.getcwd())
 
   try:
@@ -169,35 +174,45 @@ def main():
     tls=tls_config
   )
 
-  # specifiers = chain(
-  #   [exact(t) for t in arguments.pop('--exact')],
-  #   [dependents(t) for t in arguments.pop('--dependents')],
-  #   [exclude(t) for t in arguments.pop('--exclude')],
-  #   [upto(t) for t in arguments.pop('--upto')],
-  #   [upto(t) for t in arguments.pop('TARGET')]
-  # )
+  commands = ['build','push', 'purge']
+  # {'publish': false, 'purge': true, ...} = 'purge'
+  command_name = _0([
+    c for c in commands
+    if arguments[c]
+  ]) or "build"
 
-  specifiers = chain(
+  command = getattr(Shipwright(config,repo,client), command_name)
+
+  args = [chain(
     map(exact, arguments.pop('--exact')),
     map(dependents, arguments.pop('--dependents')),
     map(exclude, arguments.pop('--exclude')),
     map(upto, arguments.pop('--upto')),
     map(upto, arguments.pop('TARGET'))
-  )
+  )]
+
+  if command_name == 'push':
+    args.append(not arguments.pop('--no-build'))
 
 
-  # {'publish': false, 'purge': true, ...} = 'purge'
-  command_name = _0([
-    command for (command, enabled) in arguments.items()
-    if command.islower() and enabled
-  ]) or "build"
+  if arguments['--dump-file']:
+    dump_file = open(arguments['--dump-file'], 'w')
+    writer = fn.compose(
+      switch,
+      fn.tap(streamout(dump_file))
+    )
+  else:
+    writer = switch
 
-  command = getattr(Shipwright(config,repo,client), command_name)
-
-
-  for event in command(specifiers):
+  for event in command(*args):
     show_fn = mk_show(event)
-    show_fn(switch(event))
+    show_fn(writer(event))
+
+
+@fn.curry
+def streamout(f, event):
+  f.write(json.dumps(event))
+  f.write('\n')
 
 def exit(msg):
   print(msg)
