@@ -50,6 +50,7 @@ def tag_containers(client, containers,  new_ref):
     client.tag(
       image, 
       container.name,
-      tag=tag
+      tag=tag,
+      force=True
     )
     yield dict(event="tag", container=container, image=image, tag=tag)

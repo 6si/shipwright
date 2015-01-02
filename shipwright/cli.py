@@ -14,12 +14,16 @@ Usage:
 
 Options:
 
- --help           Show all help information
+ --help               Show all help information
 
- --dump-file=FILE Save raw events to json to FILE. Useful for
-                  debugging.           
+ --dump-file=FILE     Save raw events to json to FILE. Useful for
+                      debugging.           
 
- -H DOCKER_HOST   Override DOCKER_HOST if it's set in the environment.
+ -H DOCKER_HOST       Override DOCKER_HOST if it's set in the environment.
+
+ --x-assert-hostname  Disable strict hostchecking, useful for boot2docker.
+ 
+
 
  
 Specifiers:
@@ -98,6 +102,8 @@ from itertools import cycle,chain
 
 from docopt import docopt
 import docker
+from docker.utils import kwargs_from_env
+
 import git
 
 from shipwright import Shipwright
@@ -141,39 +147,16 @@ def main():
       "Run shipwright --help for more information."
     )
 
-  
-  base_url = os.environ.get('DOCKER_HOST','unix:///var/run/docker.sock')
-  
-  DOCKER_TLS_VERIFY = bool(os.environ.get('DOCKER_TLS_VERIFY', False))
- 
-  # todo: replace with from docker.utils import kwargs_from_env
-  if not DOCKER_TLS_VERIFY:
-    tls_config = False
-  else:
-    cert_path = os.environ.get('DOCKER_CERT_PATH')
-    if cert_path:
-      ca_cert_path = os.path.join(cert_path,'ca.pem')
-      client_cert=(
-        os.path.join(cert_path, 'cert.pem'), 
-        os.path.join(cert_path, 'key.pem')
-      )
+  assert_hostname = config.get('assert_hostname')
 
-    tls_config = docker.tls.TLSConfig(
-      ssl_version = ssl.PROTOCOL_TLSv1,
-      client_cert = client_cert,
-      verify=ca_cert_path,
-      assert_hostname=False
-    )
-    if base_url.startswith('tcp://'):
-      base_url = 'https://' + base_url[6:]
+  if arguments['--x-assert-hostname']:
+    assert_hostname = not arguments['--x-assert-hostname']
 
-  client = docker.Client(
-    base_url=base_url,
-    version='1.12',
-    timeout=10,
-    tls=tls_config
-  )
 
+  client_cfg = kwargs_from_env()
+  client_cfg['tls'].assert_hostname = assert_hostname
+
+  client = docker.Client(version='1.15', **client_cfg)
   commands = ['build','push', 'purge']
   # {'publish': false, 'purge': true, ...} = 'purge'
   command_name = _0([
