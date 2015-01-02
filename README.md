@@ -46,7 +46,7 @@ is either your docker hub user name or the URL to your private repository.
 Additionally your config file can map directory names to alternative
 docker repositories. For example here is a `.shipwright.json`
 for the docker hub user `shipwright` that also maps the root of the 
-git repositor to the docker image `shipwright/shared` and the `/foo`
+git repository to the docker image `shipwright/shared` and the `/foo`
 directory to `shipwright/awesome_sauce`.
 
 ```json
