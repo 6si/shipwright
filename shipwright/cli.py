@@ -154,7 +154,10 @@ def main():
 
 
   client_cfg = kwargs_from_env()
-  client_cfg['tls'].assert_hostname = assert_hostname
+  fn.maybe(
+    fn.setattr('assert_hostname', assert_hostname),
+    client_cfg.get('tls')
+  )
 
   client = docker.Client(version='1.15', **client_cfg)
   commands = ['build','push', 'purge']

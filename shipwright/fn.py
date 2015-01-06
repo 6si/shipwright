@@ -333,6 +333,11 @@ def identity(obj):
 def getattr(attr, obj):
   return __builtin__.getattr(obj, attr)
 
+@curry
+def setattr(attr, value, obj):
+  __builtin__.setattr(obj, attr, value)
+  return obj
+
 # namedtuples
 def replace(**kw):
   def _replace(nt):
