@@ -1,6 +1,12 @@
 Change log
 ==========
 
+0.2.2 (2015-01-07)
+------------------
+
+ - Fix bug missing `tls` when communicating with docker over a unix socket.
+
+
 0.2.1 (2015-01-01)
 ------------------
 
