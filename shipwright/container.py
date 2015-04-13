@@ -50,7 +50,7 @@ def containers(name_func, path):
   ]
 
 
-#namespace -> path -> Container(name, path, parent)
+# (path -> name) -> path -> Container(name, path, parent)
 def container_from_path(name_func, path):
   """
   Given a path to a Dockerfile parse the file and return 

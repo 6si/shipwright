@@ -55,7 +55,6 @@ def eval(specifiers, targets):
 def needs_building(tree):
   """
   """
-  
   gen = breadth_first_iter(tree)
   root = next(gen) # skip root
   loc = next(gen)
@@ -67,9 +66,8 @@ def needs_building(tree):
   while True:
     try:
       target  = loc.node()
-      
-      if target.current_rel > target.last_built_rel:
 
+      if target.current_rel > target.last_built_rel:
         # target has changes, it and all it's desendents need
         # to be rebuilt
         for modified_loc in breadth_first_iter(loc):
@@ -129,34 +127,23 @@ def make_tree(containers):
   tree =  zipper.zipper(root, is_branch, children, make_node)
   
   for c in containers:
-    t = c._replace(children=())
+
+    branch_children, root_children = split(is_child(c), tree.children())
+    t = c._replace(children=tuple(branch_children))
+
+    if branch_children:
+      tree = tree.edit(replace, tuple(root_children))
 
     loc = tree.find(fmap(is_target(t.parent)))
     if loc:
       tree = loc.insert(t).top()
-    else: 
-      tree = tree.edit(reroot, t)
+    else:
+      tree = tree.insert(t) 
 
   return tree
 
-def reroot(root, branch):
-  """
-  Adds the branch into the root, sweeping up children that
-  may have been inserted before it.
-  """
-  root_children = []
-  branch_children = []
-  for child in root.children:
-    if child.parent == branch.name:
-      branch_children.append(child)
-    else:
-      root_children.append(child)
-
-  branch = branch._replace(children=tuple(branch_children))
-  root_children.append(branch)
-
-  return root._replace(children=tuple(root_children))
-
+def replace(node, children):
+  return node._replace(children=children)
 
 def children(item):
   return item.children
@@ -211,7 +198,7 @@ def is_target(name, target):
 @curry
 def is_child(parent, target):
   if not isinstance(target, Root):
-    return target.parent == parent
+    return target.parent == parent.name
 
 # (a -> b) -> Loc a -> b
 @curry
@@ -226,6 +213,26 @@ def lineage(loc):
     results.append(node)
     loc = loc.up()
   return results
+
+
+# (a -> Bool) -> [a] ->[a], [a]
+@curry
+def split(f, children):
+  """
+  Given a function that returns true or false and a list. Return
+  a two lists all items f(child) == True is in list 1 and 
+  all items not in the list are in list 2.
+
+  """
+
+  l1 = []
+  l2 = []
+  for child in children:
+    if f(child):
+      l1.append(child)
+    else:
+      l2.append(child)
+  return l1, l2
 
 
 # Loc -> [Target]
