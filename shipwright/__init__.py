@@ -72,7 +72,6 @@ class Shipwright(object):
 
 
   def build(self, specifiers):
-    
     tree = dependencies.eval(specifiers, self.targets())
     return self.build_tree(tree)
 
