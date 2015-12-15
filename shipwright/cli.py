@@ -159,7 +159,7 @@ def main():
     client_cfg.get('tls')
   )
 
-  client = docker.Client(version='1.15', **client_cfg)
+  client = docker.Client(version='1.18', **client_cfg)
   commands = ['build','push', 'purge']
   # {'publish': false, 'purge': true, ...} = 'purge'
   command_name = _0([
