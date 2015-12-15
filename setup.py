@@ -33,7 +33,7 @@ setup(
         'docopt',
         'zipper',
         'requests>=2.4.0',
-        'docker-py>=0.6.0',
+        'docker-py>=1.6.0',
         'GitPython==0.3.2.RC1',
         'splicer>=0.2.0'
     ],
