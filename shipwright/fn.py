@@ -6,7 +6,11 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
-import __builtin__
+
+try:
+    import builtins as __builtin__
+except ImportError:
+    import __builtin__
 
 
 from itertools import chain, imap as itertools_imap
