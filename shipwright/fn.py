@@ -13,8 +13,14 @@ except ImportError:
     import __builtin__
 
 
-from itertools import chain, imap as itertools_imap
-from functools import partial, wraps
+from itertools import chain
+
+try:
+    from itertools import imap as itertools_imap
+except ImportError:
+    itertools_imap = map
+
+from functools import partial, wraps, reduce as ft_reduce
 import inspect
 
 import re
@@ -54,7 +60,7 @@ def compose(*fns):
   """
 
   ordered = list(reversed(fns))
-  reduce = __builtin__.reduce
+  reduce = ft_reduce
   
   def compose_(v):
      return reduce(lambda v, f: f(v), ordered, v)
