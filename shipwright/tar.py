@@ -93,9 +93,10 @@ def bundle_docker_dir(modify_docker_func, path):
   dfinfo = tarfile.TarInfo('Dockerfile')
 
 
-  dockerfile = io.BytesIO(
-    modify_docker_func(open(join(path, 'Dockerfile')).read())
-  )
+  contents = modify_docker_func(open(join(path, 'Dockerfile')).read())
+  if not isinstance(contents, bytes):
+      contents = contents.encode('utf8')
+  dockerfile = io.BytesIO(contents)
 
   dfinfo.size = len(dockerfile.getvalue())
   t.addfile(dfinfo, dockerfile)
