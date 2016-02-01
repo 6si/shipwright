@@ -98,7 +98,7 @@ from __future__ import print_function
 import sys
 import os
 import json
-from itertools import cycle,chain
+from itertools import cycle, chain
 
 from docopt import docopt
 import docker
@@ -160,14 +160,14 @@ def main():
   )
 
   client = docker.Client(version='1.18', **client_cfg)
-  commands = ['build','push', 'purge']
+  commands = ['build', 'push', 'purge']
   # {'publish': false, 'purge': true, ...} = 'purge'
   command_name = _0([
     c for c in commands
     if arguments[c]
   ]) or "build"
 
-  command = getattr(Shipwright(config,repo,client), command_name)
+  command = getattr(Shipwright(config, repo, client), command_name)
 
   args = [chain(
     map(exact, arguments.pop('--exact')),

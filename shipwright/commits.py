@@ -29,7 +29,7 @@ def relative_commit(commit_map, tag):
 def max_commit(commit_map, commits):
   # return the pair (tag, relative_commit)
   if commits:
-    return max(map(juxt(commit_map,identity), commits))[::-1] #reverse the list
+    return max(map(juxt(commit_map, identity), commits))[::-1] #reverse the list
   else:
     return [None, -1]
 
@@ -42,7 +42,7 @@ def last_commit(repo,  path):
 
 @curry
 def last_commit_relative(repo, commit_map, path):
-  return relative_commit(commit_map, last_commit(repo,path))
+  return relative_commit(commit_map, last_commit(repo, path))
 
 
 

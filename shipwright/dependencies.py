@@ -11,7 +11,7 @@ from .fn import curry
 
 def union(inclusions, tree):
   targets = reduce(
-    lambda p,f: p | set(f(tree)),  # for each tree func run it, convert to set
+    lambda p, f: p | set(f(tree)),  # for each tree func run it, convert to set
     inclusions, 
     set()
   )
@@ -153,7 +153,7 @@ def is_branch(item):
 
 def make_node(node, children):
   # keep children sorted to make testing easier
-  ch = tuple(sorted(children,key=fn.getattr('name')))
+  ch = tuple(sorted(children, key=fn.getattr('name')))
   return node._replace(children=ch)
 
 

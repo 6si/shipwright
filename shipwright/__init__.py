@@ -30,7 +30,7 @@ class Shipwright(object):
     return list_containers(
       container_name(
         self.namespace, 
-        self.config.get('names',{}),
+        self.config.get('names', {}),
         self.source_control.working_dir
       ),
       self.source_control.working_dir
@@ -150,7 +150,7 @@ class Shipwright(object):
 
     """
     branch = self.source_control.active_branch.name
-    tree = dependencies.eval(specifiers,self.targets())
+    tree = dependencies.eval(specifiers, self.targets())
 
     push_tree = compose(
       push.do_push(self.docker_client),
@@ -165,7 +165,7 @@ class Shipwright(object):
       return push_tree(tree)
 
 
-  def z_push(self,tree):
+  def z_push(self, tree):
     containers = dependencies.brood(tree)
 
     branch = self.source_control.active_branch.name
@@ -202,7 +202,7 @@ def unit(tree):
 
 # (Tree -> [Target]) -> (Tree -> [Target]) -> [Target]
 @curry
-def bind(a,b,tree):
+def bind(a, b, tree):
   """
   Glues two Shipwright commands (functions) together.  
   """
@@ -212,7 +212,7 @@ def bind(a,b,tree):
   while True:
     try:
       yield next(iterator)
-    except StopIteration, e:
+    except StopIteration as e:
       x1 = e.args[0]
       for evt in b(dependencies.make_tree(x1)):
         yield evt

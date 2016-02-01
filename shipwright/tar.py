@@ -76,7 +76,7 @@ def bundle_docker_dir(modify_docker_func, path):
   # TODO: respect .dockerignore
 
   try:
-    ignore = filter(None,[
+    ignore = filter(None, [
       p.strip() for p in open(join(path, '.dockerignore')).readlines()
     ])
   except IOError:

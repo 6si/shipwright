@@ -37,10 +37,10 @@ def tags_from_containers(client, containers):
   )
 
 def encode_tag(tag):
-  return tag.replace('/','-')
+  return tag.replace('/', '-')
 
 def decode_tag(tag):
-  return tag.replace('-','/')
+  return tag.replace('-', '/')
 
 
 def tag_containers(client, containers,  new_ref):

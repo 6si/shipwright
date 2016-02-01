@@ -30,7 +30,7 @@ def container_name(namespace, name_map, root_path, path):
     return docker_repo
   else:
     # try to guess the name from the path
-    return '/'.join([namespace,name(path)])
+    return '/'.join([namespace, name(path)])
 
 
 # namespace -> path -> [Container]
@@ -144,7 +144,7 @@ def setup(module):
     'other/subdir2/empty.txt': ''
   }
   
-  for path,content in contents.items():
+  for path, content in contents.items():
       file_path = os.path.join(TEST_ROOT, path)
       if content is None:
         dir = file_path
@@ -152,7 +152,7 @@ def setup(module):
         dir = os.path.dirname(file_path)
       os.makedirs(dir)
       if content is not None:
-        with(open(file_path,'w')) as f:
+        with(open(file_path, 'w')) as f:
           f.write(content)
     
 

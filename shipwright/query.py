@@ -46,9 +46,9 @@ def dataset(source_control, docker_client, containers):
   dataset = splicer.DataSet()
   dataset.add_aggregate(
     "maxwhen",
-    func=maxwhen ,
+    func=maxwhen,
     returns=Field(name="min", type="STRING"),
-    initial=(None,None),
+    initial=(None, None),
     finalize=lambda state: state[0]
   )
 
