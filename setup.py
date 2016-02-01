@@ -34,7 +34,7 @@ setup(
         'zipper',
         'requests>=2.4.0',
         'docker-py>=1.6.0',
-        'GitPython==0.3.2.RC1',
+        'GitPython>=1.0.1, <2.0.0',
         'splicer>=0.2.0'
     ],
     author_email='scott@6sense.com',
