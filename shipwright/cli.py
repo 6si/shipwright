@@ -251,4 +251,4 @@ def switch(rec):
   elif rec['event'] == 'removed':
     return 'Untagging {image}:{tag}'.format(**rec)
   else:
-    return rec
+    return json.dumps(rec)
