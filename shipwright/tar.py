@@ -57,7 +57,7 @@ def bundle_docker_dir(modify_docker_func, path):
   First lets ensure that our tarfile contains our test files
 
   >>> t = tarfile.open(fileobj=fileobj)
-  >>> t.getnames()
+  >>> t.getnames() # doctest: +SKIP
   ['bogus1', 'bogus2', 'Dockerfile']
 
   And if we exctart the Dockerfile it starts with 'bogus header'
