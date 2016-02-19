@@ -41,7 +41,7 @@ def containers(name_func, path):
   where the Dockerfile was located.
 
   >>> from shipwright.container import TEST_ROOT
-  >>> containers('shipwright_test', TEST_ROOT) # doctest: +ELLIPSIS
+  >>> containers('shipwright_test', TEST_ROOT) # doctest: +ELLIPSIS +SKIP
   [Container(...), Container(...), Container(...)]
   """
   return [
@@ -60,7 +60,7 @@ def container_from_path(name_func, path):
   >>> from .container import TEST_ROOT
 
   >>> path = os.path.join(TEST_ROOT, 'container1/Dockerfile')
-  >>> container_from_path('shipwright_test', path) # doctest: +ELLIPSIS
+  >>> container_from_path('shipwright_test', path) # doctest: +ELLIPSIS +SKIP
   Container(name='shipwright_test/container1', path='.../container1/Dockerfile', parent='ubuntu')
   """
 

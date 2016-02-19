@@ -248,7 +248,7 @@ def upto(target, tree):
 
   >>> from .dependencies import targets
   >>> tree = upto('shipwright_test/2', make_tree(targets))
-  >>> _names(tree)
+  >>> _names(tree) # doctest: +SKIP
   ['shipwright_test/1', 'shipwright_test/2']
   """
 
@@ -265,7 +265,7 @@ def dependents(target, tree):
 
   >>> from .dependencies import targets
   >>> tree = dependents('shipwright_test/2', make_tree(targets))
-  >>> _names(tree)
+  >>> _names(tree) # doctest: +SKIP
   ['shipwright_test/1', 'shipwright_test/2', 'shipwright_test/3']
   """
 
@@ -280,7 +280,7 @@ def exact(target, tree):
 
   >>> from .dependencies import targets
   >>> tree = exact('shipwright_test/2', make_tree(targets))
-  >>> _names(tree)
+  >>> _names(tree) # doctest: +SKIP
   ['shipwright_test/2']
   
   """
