@@ -17,7 +17,7 @@ def key_from_image_name(image_name):
 def key_from_image_info(image_info_dict):
   """
   >>> key_from_image_info({ u'RepoTags': [u'shipwright/base:6e29823388f8', u'shipwright/base:test']})
-  ['6e29823388f8', 'test']
+  [u'6e29823388f8', u'test']
   """
 
 @curry
