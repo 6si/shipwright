@@ -240,6 +240,7 @@ def brood(loc):
   return [loc.node() for loc in breadth_first_iter(loc)][1:]
 
 
+
 # Target -> Tree -> [Target]
 @curry
 def upto(target, tree):
@@ -247,8 +248,8 @@ def upto(target, tree):
   returns target and everything it depends on
 
   >>> from .dependencies import targets
-  >>> tree = upto('shipwright_test/2', make_tree(targets))
-  >>> _names(tree)
+  >>> targets = upto('shipwright_test/2', make_tree(targets))
+  >>> _names_list(targets)
   ['shipwright_test/1', 'shipwright_test/2']
   """
 
@@ -264,8 +265,8 @@ def dependents(target, tree):
   everything that depends on it
 
   >>> from .dependencies import targets
-  >>> tree = dependents('shipwright_test/2', make_tree(targets))
-  >>> _names(tree)
+  >>> targets = dependents('shipwright_test/2', make_tree(targets))
+  >>> _names_list(targets)
   ['shipwright_test/1', 'shipwright_test/2', 'shipwright_test/3']
   """
 
@@ -279,8 +280,8 @@ def exact(target, tree):
   Returns only the target.
 
   >>> from .dependencies import targets
-  >>> tree = exact('shipwright_test/2', make_tree(targets))
-  >>> _names(tree)
+  >>> targets = exact('shipwright_test/2', make_tree(targets))
+  >>> _names_list(targets)
   ['shipwright_test/2']
   
   """
@@ -314,7 +315,10 @@ def exclude(target, tree):
 
 ### Test methods ###
 def _names(tree):
- return [n.name for n in brood(tree)]
+  return [n.name for n in brood(tree)]
+
+def _names_list(targets):
+  return sorted([n.name for n in targets])
 
 def setup_module(module):
   from .container import Container

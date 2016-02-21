@@ -50,7 +50,7 @@ def bundle_docker_dir(modify_docker_func, path):
   >>> fileobj = bundle_docker_dir(append_bogus, tar.TEST_ROOT)
 
   Normally we'd just pass this directly to the docker build command
-  but for the purpose of this test, we'll use trfile to decode the string
+  but for the purpose of this test, we'll use tarfile to decode the string
   and ensure that our mutation happened as planned.
 
 
@@ -82,9 +82,12 @@ def bundle_docker_dir(modify_docker_func, path):
   except IOError:
     ignore = []
 
-  ignore.append('Dockerfile')
 
-  fileobj = utils.tar(path, ignore)
+  # docker-py 1.6+ won't ignore the dockerfile
+  # passing dockerfile='' works around the issuen
+  # and lets us add the modified file when we're done.
+  ignore.append('Dockerfile')
+  fileobj = utils.tar(path, ignore, dockerfile='')
 
 
   # append a dockerfile after running it through a mutation

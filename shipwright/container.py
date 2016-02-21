@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import os
 from collections import namedtuple
 
-from .fn import curry
+from .fn import curry, identity
 
 Container = namedtuple('Container', 'name,dir_path,path,parent')
 
@@ -41,7 +41,7 @@ def containers(name_func, path):
   where the Dockerfile was located.
 
   >>> from shipwright.container import TEST_ROOT
-  >>> containers('shipwright_test', TEST_ROOT) # doctest: +ELLIPSIS
+  >>> containers(identity, TEST_ROOT) # doctest: +ELLIPSIS
   [Container(...), Container(...), Container(...)]
   """
   return [
@@ -53,15 +53,21 @@ def containers(name_func, path):
 # (path -> name) -> path -> Container(name, path, parent)
 def container_from_path(name_func, path):
   """
-  Given a path to a Dockerfile parse the file and return 
-  a coresponding Container
+  Given a name_func() that can determine the repository 
+  name for an image from a path; and a path to a Dockerfile 
+  parse the file and return a corresponding Container
 
+  The runtime uses a more sophisticated name_func() for 
+  testing/demonstration purposes we simply append
+  "shipwright_test" to the directory name.
+
+  >>> def name_func(path):
+  ...   return 'shipwright_test/' + os.path.basename(os.path.dirname(path))
 
   >>> from .container import TEST_ROOT
-
   >>> path = os.path.join(TEST_ROOT, 'container1/Dockerfile')
-  >>> container_from_path('shipwright_test', path) # doctest: +ELLIPSIS
-  Container(name='shipwright_test/container1', path='.../container1/Dockerfile', parent='ubuntu')
+  >>> container_from_path(name_func, path) # doctest: +ELLIPSIS
+  Container(name='shipwright_test/container1', dir_path='.../container1', path='.../container1/Dockerfile', parent='ubuntu')
   """
 
   return Container(
