@@ -36,10 +36,10 @@ def bundle_docker_dir(modify_docker_func, path):
 
   >>> from shipwright import tar 
   >>> path = join(tar.TEST_ROOT, 'Dockerfile')
-  >>> open(path, 'w').write('blah')
-  
-  >>> open(join(tar.TEST_ROOT, 'bogus1'),'w').write('hi mom')
-  >>> open(join(tar.TEST_ROOT, 'bogus2'), 'w').write('hello world')
+  >>> _ = open(path, 'w').write(u'blah')
+
+  >>> _ = open(join(tar.TEST_ROOT, 'bogus1'),'w').write('hi mom')
+  >>> _ = open(join(tar.TEST_ROOT, 'bogus2'), 'w').write('hello world')
 
 
   Now we can call bundle_docker_dir passing it our append_bogus function to
@@ -63,7 +63,7 @@ def bundle_docker_dir(modify_docker_func, path):
   And if we exctart the Dockerfile it starts with 'bogus header'
 
   >>> ti = t.extractfile('Dockerfile')
-  >>> ti.read().startswith('bogus header')
+  >>> ti.read().startswith(b'bogus header')
   True
  
   Obviously a real mutation would ensure that the the contents 

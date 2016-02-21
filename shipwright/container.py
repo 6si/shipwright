@@ -115,9 +115,10 @@ def name(docker_path):
 
 def parent(docker_path):
   """
+  >>> import io
   >>> from .container import TEST_ROOT
   >>> docker_path = os.path.join(TEST_ROOT, "Dockerfile")
-  >>> open(docker_path, "w").write('FrOm    ubuntu')
+  >>> _ = open(docker_path, "w").write('FrOm    ubuntu')
 
   >>> parent(docker_path)
   'ubuntu'

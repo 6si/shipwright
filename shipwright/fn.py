@@ -109,8 +109,7 @@ def juxt(*fns):
   >>> juxt(len)("blah")
   [4]
 
-  >>> import string
-  >>> juxt(len, string.capitalize)("blah")
+  >>> juxt(len, lambda o: o.capitalize())("blah")
   [4, 'Blah']
 
   """
@@ -255,7 +254,7 @@ flatten = chain.from_iterable
 
 @curry
 def map(fn, sequence):
-  return __builtin__.map(fn, sequence)
+  return list(__builtin__.map(fn, sequence))
 
 @curry
 def fmap(fn, sequence):
@@ -269,7 +268,7 @@ def flat_map(f, arr):
 
 @curry
 def filter(fn, sequence):
-  return __builtin__.filter(fn, sequence)
+  return list(__builtin__.filter(fn, sequence))
 
 
 def empty(seq):
