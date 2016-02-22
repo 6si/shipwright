@@ -16,8 +16,10 @@ def key_from_image_name(image_name):
 @fn.composed(fn.map(key_from_image_name), fn.getitem('RepoTags'))
 def key_from_image_info(image_info_dict):
   """
-  >>> key_from_image_info({ u'RepoTags': [u'shipwright/base:6e29823388f8', u'shipwright/base:test']})
-  [u'6e29823388f8', u'test']
+  >>> key_from_image_info(
+  ...     {'RepoTags': ['shipwright/base:6e29823388f8', 'shipwright/base:test']}
+  ... )
+  ['6e29823388f8', 'test']
   """
 
 @curry
@@ -37,10 +39,10 @@ def tags_from_containers(client, containers):
   )
 
 def encode_tag(tag):
-  return tag.replace('/','-')
+  return tag.replace('/', '-')
 
 def decode_tag(tag):
-  return tag.replace('-','/')
+  return tag.replace('-', '/')
 
 
 def tag_containers(client, containers,  new_ref):

@@ -4,7 +4,7 @@ import string
 from . import fn
 
 from .fn import (
-  apply,  compose, composed, curry, identity,juxt, maybe, fmap,
+  apply,  compose, composed, curry, identity, juxt, maybe, fmap,
   flat_map, merge
 )
 

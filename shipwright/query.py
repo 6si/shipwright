@@ -8,6 +8,7 @@ from splicer.adapters.dict_adapter import DictAdapter
 
 from . import commits
 from . import docker
+from . import compat
 
 COMMIT_SCHEMA=[
   dict(name="branch", type="STRING"),
@@ -38,7 +39,13 @@ def branches(source_control):
   ]
 
 def maxwhen(state, new_v, new_test):
-  return max(state, (new_v, new_test))
+  def key(item):
+      v, test = item
+      return (
+          compat.python2_sort_key(v),
+          compat.python2_sort_key(test),
+      )
+  return max(state, (new_v, new_test), key=key)
   
 
 def dataset(source_control, docker_client, containers):
@@ -46,9 +53,9 @@ def dataset(source_control, docker_client, containers):
   dataset = splicer.DataSet()
   dataset.add_aggregate(
     "maxwhen",
-    func=maxwhen ,
+    func=maxwhen,
     returns=Field(name="min", type="STRING"),
-    initial=(None,None),
+    initial=(None, None),
     finalize=lambda state: state[0]
   )
 

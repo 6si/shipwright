@@ -6,11 +6,21 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
-import __builtin__
+
+try:
+    import builtins as __builtin__
+except ImportError:
+    import __builtin__
 
 
-from itertools import chain, imap as itertools_imap
-from functools import partial, wraps
+from itertools import chain
+
+try:
+    from itertools import imap as itertools_imap
+except ImportError:
+    itertools_imap = map
+
+from functools import partial, wraps, reduce as ft_reduce
 import inspect
 
 import re
@@ -50,7 +60,7 @@ def compose(*fns):
   """
 
   ordered = list(reversed(fns))
-  reduce = __builtin__.reduce
+  reduce = ft_reduce
   
   def compose_(v):
      return reduce(lambda v, f: f(v), ordered, v)
@@ -99,8 +109,7 @@ def juxt(*fns):
   >>> juxt(len)("blah")
   [4]
 
-  >>> import string
-  >>> juxt(len, string.capitalize)("blah")
+  >>> juxt(len, lambda o: o.capitalize())("blah")
   [4, 'Blah']
 
   """
@@ -128,8 +137,8 @@ def catch(fn, on_error, value):
 
   try:
     return fn(value)
-  except Exception, e:
-    return on_error(e,value)
+  except Exception as e:
+    return on_error(e, value)
 
 #
 @curry
@@ -138,36 +147,36 @@ def not_(fn, a):
 
 # binary comparisons
 @curry
-def eq(a,b):
+def eq(a, b):
   return a == b
 
 @curry
-def ne(a,b):
+def ne(a, b):
   return a != b
 
 @curry
-def lt(a,b):
+def lt(a, b):
   return a < b
 
 @curry
-def lte(a,b):
+def lte(a, b):
   return a <= b
 
 @curry
-def gt(a,b):
+def gt(a, b):
   return a > b
 
 @curry
-def gte(a,b):
+def gte(a, b):
   return a >= b
 
 @curry
-def contains(a,b):
+def contains(a, b):
   return b in a
 
 
 @curry
-def is_(a,b):
+def is_(a, b):
   return a is b
 
 # logic functions
@@ -245,11 +254,11 @@ flatten = chain.from_iterable
 
 @curry
 def map(fn, sequence):
-  return __builtin__.map(fn, sequence)
+  return list(__builtin__.map(fn, sequence))
 
 @curry
 def fmap(fn, sequence):
-  return itertools_imap(fn,sequence)
+  return itertools_imap(fn, sequence)
 
 
 # (a -> [b]) -> [a] -> [b]
@@ -259,7 +268,7 @@ def flat_map(f, arr):
 
 @curry
 def filter(fn, sequence):
-  return __builtin__.filter(fn, sequence)
+  return list(__builtin__.filter(fn, sequence))
 
 
 def empty(seq):
@@ -370,8 +379,8 @@ def debug(fn, value):
 
 if __name__== "__main__":
   @curry
-  def f(x,y,z):
+  def f(x, y, z):
     return x+y+z
 
-  assert 6 ==  f(1,2,3) == f(1)(2,3) == f(1)(2)(3) == f(1)()(2)()(3)
+  assert 6 ==  f(1, 2, 3) == f(1)(2, 3) == f(1)(2)(3) == f(1)()(2)()(3)
 
