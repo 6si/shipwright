@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from collections import namedtuple, defaultdict
+from collections import namedtuple
 
 from . import build
 from . import push
@@ -13,10 +13,9 @@ from . import dependencies
 
 from . import query
 
-from .container import containers as list_containers, container_name, Container
-from .fn import curry, compose, not_, contains
+from .container import containers as list_containers, container_name
+from .fn import curry, compose
 
-from . import fn
 
 class Shipwright(object):
   def __init__(self, config, source_control, docker_client):
@@ -25,11 +24,10 @@ class Shipwright(object):
     self.namespace = config['namespace']
     self.config = config
 
-
   def containers(self):
     return list_containers(
       container_name(
-        self.namespace, 
+        self.namespace,
         self.config.get('names', {}),
         self.source_control.working_dir
       ),
@@ -39,15 +37,14 @@ class Shipwright(object):
   def targets(self):
     client = self.docker_client
 
-    containers = self.containers() 
- 
+    containers = self.containers()
+
     commit_map = commits.mkmap(self.source_control)
 
     last_built_ref, last_built_rel = zip(*map(
-      commits.max_commit(commit_map),  
-      docker.tags_from_containers(self.docker_client, containers)  # list of tags
+      commits.max_commit(commit_map),
+      docker.tags_from_containers(client, containers)  # list of tags
     ))
-
 
     current_rel = map(
       compose(
@@ -57,24 +54,20 @@ class Shipwright(object):
       containers
     )
 
- 
     # [[Container], [Tag], [Int], [Int]] -> [Target]
     return [
       Target(container, built_ref, built_rel, current_rel, None)
 
-      for container, built_ref, built_rel, current_rel in  zip(
+      for container, built_ref, built_rel, current_rel in zip(
         containers, last_built_ref, last_built_rel, current_rel
       )
 
       if current_rel is not None
-    ] 
-    
-
+    ]
 
   def build(self, specifiers):
     tree = dependencies.eval(specifiers, self.targets())
     return self.build_tree(tree)
-
 
   def build_tree(self, tree):
     branch = self.source_control.active_branch.name
@@ -88,45 +81,34 @@ class Shipwright(object):
       # of the containers that do need to be built can refer
       # to the skiped ones by user/image:<last_built_ref> which makes
       # them part of the same group.
-      for evt in docker.tag_containers(
-        self.docker_client, 
-        current,
-        this_ref_str
-      ): yield evt
+      for evt in docker.tag_containers(self.docker_client, current, this_ref_str):
+          yield evt
 
-    for evt in  build.do_build( 
-          self.docker_client,
-          this_ref_str,
-          targets # what needs building
-    ): yield evt
+    # what needs building
+    for evt in build.do_build(self.docker_client, this_ref_str, targets):
+        yield evt
 
     all_images = current + [
       t._replace(last_built_ref=this_ref_str)
       for t in targets
     ]
-    
+
     # now that we're built and tagged all the images with git commit,
     # (either during the process of building or forwarding the tag)
     # tag all containers with the branch name
-    for evt in docker.tag_containers(
-      self.docker_client, 
-      all_images, 
-      branch
-    ): yield evt
+    for evt in docker.tag_containers(self.docker_client, all_images, branch):
+        yield evt
 
-    for evt in docker.tag_containers(
-      self.docker_client, 
-      all_images, 
-      "latest"
-    ): yield evt
+    for evt in docker.tag_containers(self.docker_client, all_images, "latest"):
+        yield evt
 
     raise StopIteration(all_images)
 
   def purge(self, specifiers):
     """
-    Removes all stale images. 
+    Removes all stale images.
 
-    A stale image is an image that is not the latest of at 
+    A stale image is an image that is not the latest of at
     least one branch.
     """
 
@@ -134,15 +116,14 @@ class Shipwright(object):
     d = query.dataset(self.source_control, self.docker_client, containers)
 
     stale_images = d.query('''
-      select image.image, tag 
-      from 
-        image 
-        left join latest_commit on latest_commit.commit = image.tag 
+      select image.image, tag
+      from
+        image
+        left join latest_commit on latest_commit.commit = image.tag
       where latest_commit.commit is null
     ''')
 
     return purge.do_purge(self.docker_client, stale_images)
- 
 
   def push(self, specifiers, build=True):
     """
@@ -164,7 +145,6 @@ class Shipwright(object):
     else:
       return push_tree(tree)
 
-
   def z_push(self, tree):
     containers = dependencies.brood(tree)
 
@@ -172,9 +152,9 @@ class Shipwright(object):
     d = query.dataset(self.source_control, self.docker_client, containers)
 
     images = d.query("""
-      select image, commit 
-      from latest_commit 
-      where 
+      select image, commit
+      from latest_commit
+      where
         branch = ?0 and image is not null
     """).execute(branch)
     return push.do_push(self.docker_client, images)
@@ -196,6 +176,7 @@ def expand(branch, tree):
     dependencies.brood(tree)
   )
 
+
 def unit(tree):
   return tree, iter(())
 
@@ -204,11 +185,11 @@ def unit(tree):
 @curry
 def bind(a, b, tree):
   """
-  Glues two Shipwright commands (functions) together.  
+  Glues two Shipwright commands (functions) together.
   """
 
   iterator = a(tree)
-  
+
   while True:
     try:
       yield next(iterator)
@@ -223,7 +204,7 @@ class Target(namedtuple('Target', 'container, last_built_ref, last_built_rel, cu
   @property
   def name(self):
     return self.container.name
-  
+
   @property
   def dir_path(self):
     return self.container.dir_path
@@ -235,6 +216,3 @@ class Target(namedtuple('Target', 'container, last_built_ref, last_built_rel, cu
   @property
   def path(self):
     return self.container.path
-
-
-

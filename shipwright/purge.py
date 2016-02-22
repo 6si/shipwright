@@ -1,4 +1,6 @@
 from .container import Container
+
+
 def do_purge(client, images):
  for row in images:
     image, tag = row
@@ -7,8 +9,8 @@ def do_purge(client, images):
       yield dict(event="removed", image=image, tag=tag)
     except Exception as e:
       yield dict(
-        event="error", 
+        event="error",
         error=e,
-        container=Container(image, None, None, None), 
+        container=Container(image, None, None, None),
         errorDetail=dict(message=str(e))
       )

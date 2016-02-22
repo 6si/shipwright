@@ -1,12 +1,14 @@
 from . import compat
 from .fn import (
-  compose,  curry,  fmap, flat_map, merge
+  compose, curry, fmap, flat_map, merge
 )
+
 
 @curry
 def do_push(client, images):
   return flat_map(push(client), images)
-  
+
+
 @curry
 def push(client, image_tag):
   image, tag = image_tag
@@ -17,7 +19,7 @@ def push(client, image_tag):
     ),
     client.push(
       image,
-      tag, 
+      tag,
       stream=True
     )
   )

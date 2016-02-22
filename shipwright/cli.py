@@ -10,32 +10,32 @@ Usage:
              [-e TARGET]...
              [-u TARGET]...
              [-x TARGET]...
-            
+
 
 Options:
 
  --help               Show all help information
 
  --dump-file=FILE     Save raw events to json to FILE. Useful for
-                      debugging.           
+                      debugging.
 
  -H DOCKER_HOST       Override DOCKER_HOST if it's set in the environment.
 
  --x-assert-hostname  Disable strict hostchecking, useful for boot2docker.
- 
 
 
- 
+
+
 Specifiers:
 
   -d --dependents=TARGET  Build TARGET and all its dependents
 
   -e --exact=TARGET       Build TARGET only - may fail if
-                          dependencies have not been built 
+                          dependencies have not been built
 
   -u --upto=TARGET        Build TARGET and it dependencies
 
-  -x --exclude=TARGET     Build everything but TARGET and 
+  -x --exclude=TARGET     Build everything but TARGET and
                           its dependents
 
 
@@ -44,23 +44,23 @@ Environment Variables:
   SW_NAMESPACE : If DOCKER_HUB_ACCOUNT is not passed on the command line
    this Environment variable must be present.
 
-  DOCKER_HOST : Same URL as used by the docker client to connect to 
-    the docker daemon. 
+  DOCKER_HOST : Same URL as used by the docker client to connect to
+    the docker daemon.
 
 Examples:
 
   Assuming adependencies tree that looks like this.
-  
+
   ubuntu
     └─── base
         └─── shared
-        |     ├─── service1  
+        |     ├─── service1
         |     |     └─── service2
         |     └─── service3
         └─── independent
 
 
-  Build everything: 
+  Build everything:
 
     $ shipwright
 
@@ -116,15 +116,8 @@ from shipwright.fn import _0
 from shipwright import fn
 
 
-
-# todo: only do this if python 2.7
-import ssl
-
-
-
 def main():
   arguments = docopt(__doc__, options_first=False, version='Shipwright ' + version)
-
 
   repo = git.Repo(os.getcwd())
 
@@ -136,8 +129,6 @@ def main():
     config = {
       'namespace': arguments['DOCKER_HUB_ACCOUNT'] or os.environ.get('SW_NAMESPACE')
     }
-
-
 
   if config['namespace'] is None:
     exit(
@@ -151,7 +142,6 @@ def main():
 
   if arguments['--x-assert-hostname']:
     assert_hostname = not arguments['--x-assert-hostname']
-
 
   client_cfg = kwargs_from_env()
   fn.maybe(
@@ -180,7 +170,6 @@ def main():
   if command_name == 'push':
     args.append(not arguments.pop('--no-build'))
 
-
   if arguments['--dump-file']:
     dump_file = open(arguments['--dump-file'], 'w')
     writer = fn.compose(
@@ -200,10 +189,12 @@ def streamout(f, event):
   f.write(json.dumps(event))
   f.write('\n')
 
+
 def exit(msg):
   print(msg)
   sys.exit(1)
- 
+
+
 def memo(f, arg, memos={}):
   if arg in memos:
     return memos[arg]
@@ -211,22 +202,27 @@ def memo(f, arg, memos={}):
     memos[arg] = f(arg)
     return memos[arg]
 
+
 def mk_show(evt):
   if evt['event'] in ('build_msg', 'push') or 'error' in evt:
     return memo(
-      highlight, 
-      fn.maybe(fn.getattr('name'), evt.get('container'))
-      or evt.get('image')
-      )
+      highlight,
+      fn.maybe(fn.getattr('name'),
+      evt.get('container')) or evt.get('image'),
+    )
   else:
     return print
 
 colors = cycle(rainbow())
+
+
 def highlight(name):
   color_fn = next(colors)
+
   def highlight_(msg):
     print(color_fn(name) + " | " + msg)
   return highlight_
+
 
 def switch(rec):
 
@@ -240,7 +236,7 @@ def switch(rec):
       term = ''
 
     return '[STATUS] {0}: {1}{2}'.format(
-      rec.get('id', ''), 
+      rec.get('id', ''),
       rec['status'],
       term
     )

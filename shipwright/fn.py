@@ -25,6 +25,7 @@ import inspect
 
 import re
 
+
 def curry(f):
   """
   Decorator to autocurry a function.
@@ -61,7 +62,7 @@ def compose(*fns):
 
   ordered = list(reversed(fns))
   reduce = ft_reduce
-  
+
   def compose_(v):
      return reduce(lambda v, f: f(v), ordered, v)
   return compose_
@@ -104,6 +105,7 @@ def apply(fn):
     return fn(*arr)
   return _
 
+
 def juxt(*fns):
   """
   >>> juxt(len)("blah")
@@ -117,6 +119,7 @@ def juxt(*fns):
     return [fn(val) for fn in fns]
   return _
 
+
 @curry
 def tap(fn, val):
   fn(val)
@@ -124,7 +127,8 @@ def tap(fn, val):
 
 show = tap(print)
 
-print_fun = print 
+print_fun = print
+
 
 @curry
 def catch(fn, on_error, value):
@@ -140,35 +144,42 @@ def catch(fn, on_error, value):
   except Exception as e:
     return on_error(e, value)
 
-#
+
 @curry
 def not_(fn, a):
   return not fn(a)
+
 
 # binary comparisons
 @curry
 def eq(a, b):
   return a == b
 
+
 @curry
 def ne(a, b):
   return a != b
+
 
 @curry
 def lt(a, b):
   return a < b
 
+
 @curry
 def lte(a, b):
   return a <= b
+
 
 @curry
 def gt(a, b):
   return a > b
 
+
 @curry
 def gte(a, b):
   return a >= b
+
 
 @curry
 def contains(a, b):
@@ -181,6 +192,7 @@ def is_(a, b):
 
 # logic functions
 
+
 @curry
 def maybe(fn, value):
   """
@@ -191,6 +203,7 @@ def maybe(fn, value):
     return None
   else:
     return fn(value)
+
 
 def when(*tests):
   def when_(value):
@@ -206,21 +219,25 @@ def when(*tests):
 def rsplit(sep, num, s):
   return s.rsplit(sep, num)
 
+
 @curry
 def split(sep, s):
   return s.split(sep)
 
+
 @curry
 def strip(chars, s):
   return s.strip(chars)
+
 
 @curry
 def endswith(s1, s2):
   """
   Returns true if s2 ends with s1
   """
-  
+
   return s2.endswith(s1)
+
 
 @curry
 def startswith(s1, s2):
@@ -230,12 +247,7 @@ def startswith(s1, s2):
   return s2.startswith(s1)
 
 
-
 def search(pattern, string=None):
-  """
-  """
-  regex = re.compile(pattern)
-
   def search(string):
     m = re.search(pattern, string)
     if m:
@@ -246,7 +258,6 @@ def search(pattern, string=None):
   else:
     return search(string)
 
-  
 
 # sequence funcs
 flatten = chain.from_iterable
@@ -255,6 +266,7 @@ flatten = chain.from_iterable
 @curry
 def map(fn, sequence):
   return list(__builtin__.map(fn, sequence))
+
 
 @curry
 def fmap(fn, sequence):
@@ -265,6 +277,7 @@ def fmap(fn, sequence):
 @curry
 def flat_map(f, arr):
   return flatten(fmap(f, arr))
+
 
 @curry
 def filter(fn, sequence):
@@ -282,6 +295,7 @@ def first(arr):
   """
   return arr[0]
 
+
 def last(arr):
   """
   >>> last([1,2,3])
@@ -289,9 +303,11 @@ def last(arr):
   """
   return arr[-1]
 
+
 @curry
 def slice(start, stop, seq):
   return seq[start:stop]
+
 
 @curry
 def get(index, arr):
@@ -307,7 +323,7 @@ def get(index, arr):
 def const(val):
   return lambda x: val
 
-# Convienance getters 
+# Convienance getters
 _0 = get(0)
 _1 = get(1)
 _2 = get(2)
@@ -325,6 +341,7 @@ _9 = get(9)
 def getitem(key, hashmap):
   return hashmap[key]
 
+
 @curry
 def merge(d1, d2):
   d = d1.copy()
@@ -332,26 +349,30 @@ def merge(d1, d2):
   return d
 
 
-
 # object functions
+
 
 def identity(obj):
   return obj
 
+
 @curry
 def getattr(attr, obj):
   return __builtin__.getattr(obj, attr)
+
 
 @curry
 def setattr(attr, value, obj):
   __builtin__.setattr(obj, attr, value)
   return obj
 
+
 # namedtuples
 def replace(**kw):
   def _replace(nt):
     return nt._replace(**kw)
   return _replace
+
 
 @curry
 def debug(fn, value):
@@ -366,13 +387,14 @@ def debug(fn, value):
   You can stick a debug in the middle of it to inspect the result
   before and after the function to the left is called.
 
-  So in this case wrapping function with a debug alows us to 
+  So in this case wrapping function with a debug alows us to
   inspect the input and output of it prior to being passed
   to the long function.
 
   composed_fun = compose(some, long, debug(function), chain)
 
   """
-  import pdb; pdb.set_trace()
+  import pdb
+  pdb.set_trace()
   ret = fn(value)
   return ret
