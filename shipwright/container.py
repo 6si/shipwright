@@ -43,7 +43,8 @@ def containers(name_func, path):
   where the Dockerfile was located.
 
   >>> from shipwright.container import TEST_ROOT
-  >>> containers(identity, TEST_ROOT) # doctest: +ELLIPSIS
+  >>> from shipwright import fn
+  >>> containers(fn.identity, TEST_ROOT) # doctest: +ELLIPSIS
   [Container(...), Container(...), Container(...)]
   """
   return [

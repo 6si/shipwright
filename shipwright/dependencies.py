@@ -188,7 +188,7 @@ def breadth_first_iter(loc):
 def is_target(name, target):
   """
   >>> from . import Target
-  >>> from . import Container
+  >>> from .container import Container
 
   >>> target = Target(Container('test', None, None, None), None, None, None, None)
   >>> is_target('test', target)
