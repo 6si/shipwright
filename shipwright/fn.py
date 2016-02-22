@@ -376,10 +376,3 @@ def debug(fn, value):
   import pdb; pdb.set_trace()
   ret = fn(value)
   return ret
-
-if __name__== "__main__":
-  @curry
-  def f(x, y, z):
-    return x+y+z
-
-  assert 6 ==  f(1, 2, 3) == f(1)(2, 3) == f(1)(2)(3) == f(1)()(2)()(3)
