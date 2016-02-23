@@ -133,7 +133,7 @@ def tag_parent(tag, docker_content):
   """
 
   v = re.sub(
-    '^(\s*from\s+)(([\w.]+(\:\d+)?\/)?\w+/\w+)(\s*)$', 
+    '^(\s*from\s+)(([\w.-]+(\:\d+)?\/)?[\w.-]+/[\w.-]+)(\s*)$',
     "\\1\\2:" + tag + "\\5", 
     docker_content, 
     flags=re.MULTILINE+re.I
