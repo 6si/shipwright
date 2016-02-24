@@ -163,16 +163,16 @@ class Shipwright(object):
 @curry
 def expand(branch, tree):
   """
-  Flattens the tree to the list and doubles each entry.
+  Flattens the tree to the list and triples each entry.
 
   Ex.
 
   > expand(make_tree([Target(..., last_built_ref='c1234567890a'...)]))
-  [Target(..., last_built_ref='c1234567890a'),Target(..., last_built_ref='develop'...)]
+  [Target(..., last_built_ref='c1234567890a'),Target(..., last_built_ref='develop'...),Target(..., last_built_ref='latest'...)]
 
   """
   return fn.flat_map(
-    fn.juxt(fn.identity, fn.replace(last_built_ref=branch)),
+    fn.juxt(fn.identity, fn.replace(last_built_ref=branch), fn.replace(last_built_ref="latest")),
     dependencies.brood(tree)
   )
 
