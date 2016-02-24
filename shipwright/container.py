@@ -3,9 +3,11 @@ from __future__ import absolute_import
 import os
 from collections import namedtuple
 
-from .fn import curry, identity
+from .fn import curry
+
 
 Container = namedtuple('Container', 'name,dir_path,path,parent')
+
 
 @curry
 def container_name(namespace, name_map, root_path, path):
@@ -41,23 +43,24 @@ def containers(name_func, path):
   where the Dockerfile was located.
 
   >>> from shipwright.container import TEST_ROOT
-  >>> containers(identity, TEST_ROOT) # doctest: +ELLIPSIS
+  >>> from shipwright import fn
+  >>> containers(fn.identity, TEST_ROOT) # doctest: +ELLIPSIS
   [Container(...), Container(...), Container(...)]
   """
   return [
     container_from_path(name_func, container_path)
-    for  container_path in build_files(path)
+    for container_path in build_files(path)
   ]
 
 
 # (path -> name) -> path -> Container(name, path, parent)
 def container_from_path(name_func, path):
   """
-  Given a name_func() that can determine the repository 
-  name for an image from a path; and a path to a Dockerfile 
+  Given a name_func() that can determine the repository
+  name for an image from a path; and a path to a Dockerfile
   parse the file and return a corresponding Container
 
-  The runtime uses a more sophisticated name_func() for 
+  The runtime uses a more sophisticated name_func() for
   testing/demonstration purposes we simply append
   "shipwright_test" to the directory name.
 
@@ -71,11 +74,12 @@ def container_from_path(name_func, path):
   """
 
   return Container(
-    name = name_func(path),
-    dir_path = os.path.dirname(path),
-    path = path,
-    parent = parent(path)
+    name=name_func(path),
+    dir_path=os.path.dirname(path),
+    path=path,
+    parent=parent(path)
   )
+
 
 # path -> iter([path ... / Dockerfile, ... ])
 def build_files(build_root):
@@ -94,7 +98,7 @@ def build_files(build_root):
   """
   for root, dirs, files in os.walk(build_root):
     if "Dockerfile" in files:
-      yield os.path.join(root, "Dockerfile") 
+      yield os.path.join(root, "Dockerfile")
 
 
 # path -> str
@@ -113,6 +117,7 @@ def name(docker_path):
 
   return os.path.basename(os.path.dirname(docker_path))
 
+
 def parent(docker_path):
   """
   >>> import io
@@ -129,22 +134,21 @@ def parent(docker_path):
       return l.split()[1]
 
 
+# Test Helpers ########################
 
-
-## Test Helpers ########################
 
 def setup(module):
   import tempfile
-  TEST_ROOT=module.TEST_ROOT=tempfile.mkdtemp()
+  TEST_ROOT = module.TEST_ROOT = tempfile.mkdtemp()
 
   contents = {
     'container1/Dockerfile': 'FROM ubuntu\nMAINTAINER bob',
     'container2/Dockerfile': 'FROM shipwright_test/container1\nMAINTAINER bob',
     'container3/Dockerfile': 'FROM shipwright_test/container2\nMAINTAINER bob',
-    'other/subdir1':None,
+    'other/subdir1': None,
     'other/subdir2/empty.txt': ''
   }
-  
+
   for path, content in contents.items():
       file_path = os.path.join(TEST_ROOT, path)
       if content is None:
@@ -155,7 +159,7 @@ def setup(module):
       if content is not None:
         with(open(file_path, 'w')) as f:
           f.write(content)
-    
+
 
 def teardown(module):
   import shutil

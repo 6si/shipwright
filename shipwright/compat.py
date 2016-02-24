@@ -20,6 +20,7 @@ def per_type_cmp(type_):
         mapping = per_type_cmp.mapping
     except AttributeError:
         mapping = per_type_cmp.mapping = {}
+
     def decorator(cmpfunc):
         mapping[type_] = cmpfunc
         return cmpfunc
