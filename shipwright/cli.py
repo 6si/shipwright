@@ -117,134 +117,142 @@ from shipwright import fn
 
 
 def main():
-  arguments = docopt(__doc__, options_first=False, version='Shipwright ' + version)
-
-  repo = git.Repo(os.getcwd())
-
-  try:
-    config = json.load(open(
-      os.path.join(repo.working_dir, '.shipwright.json')
-    ))
-  except OSError:
-    config = {
-      'namespace': arguments['DOCKER_HUB_ACCOUNT'] or os.environ.get('SW_NAMESPACE')
-    }
-
-  if config['namespace'] is None:
-    exit(
-      "Please specify your docker hub account in\n"
-      "the .shipwright.json config file,\n "
-      "the command line or set SW_NAMESPACE.\n"
-      "Run shipwright --help for more information."
+    arguments = docopt(
+        __doc__, options_first=False, version='Shipwright ' + version,
     )
 
-  assert_hostname = config.get('assert_hostname')
+    repo = git.Repo(os.getcwd())
 
-  if arguments['--x-assert-hostname']:
-    assert_hostname = not arguments['--x-assert-hostname']
+    try:
+        config = json.load(open(
+            os.path.join(repo.working_dir, '.shipwright.json')
+        ))
+    except OSError:
+        config = {
+            'namespace': (
+                arguments['DOCKER_HUB_ACCOUNT'] or
+                os.environ.get('SW_NAMESPACE')
+            )
+        }
 
-  client_cfg = kwargs_from_env()
-  fn.maybe(
-    fn.setattr('assert_hostname', assert_hostname),
-    client_cfg.get('tls')
-  )
+    if config['namespace'] is None:
+        exit(
+            "Please specify your docker hub account in\n"
+            "the .shipwright.json config file,\n "
+            "the command line or set SW_NAMESPACE.\n"
+            "Run shipwright --help for more information."
+        )
 
-  client = docker.Client(version='1.18', **client_cfg)
-  commands = ['build', 'push', 'purge']
-  # {'publish': false, 'purge': true, ...} = 'purge'
-  command_name = _0([
-    c for c in commands
-    if arguments[c]
-  ]) or "build"
+    assert_hostname = config.get('assert_hostname')
 
-  command = getattr(Shipwright(config, repo, client), command_name)
+    if arguments['--x-assert-hostname']:
+        assert_hostname = not arguments['--x-assert-hostname']
 
-  args = [chain(
-    map(exact, arguments.pop('--exact')),
-    map(dependents, arguments.pop('--dependents')),
-    map(exclude, arguments.pop('--exclude')),
-    map(upto, arguments.pop('--upto')),
-    map(upto, arguments.pop('TARGET'))
-  )]
-
-  if command_name == 'push':
-    args.append(not arguments.pop('--no-build'))
-
-  if arguments['--dump-file']:
-    dump_file = open(arguments['--dump-file'], 'w')
-    writer = fn.compose(
-      switch,
-      fn.tap(streamout(dump_file))
+    client_cfg = kwargs_from_env()
+    fn.maybe(
+        fn.setattr('assert_hostname', assert_hostname),
+        client_cfg.get('tls')
     )
-  else:
-    writer = switch
 
-  for event in command(*args):
-    show_fn = mk_show(event)
-    show_fn(writer(event))
+    client = docker.Client(version='1.18', **client_cfg)
+    commands = ['build', 'push', 'purge']
+    # {'publish': false, 'purge': true, ...} = 'purge'
+    command_name = _0([
+        c for c in commands
+        if arguments[c]
+    ]) or "build"
+
+    command = getattr(Shipwright(config, repo, client), command_name)
+
+    args = [chain(
+        map(exact, arguments.pop('--exact')),
+        map(dependents, arguments.pop('--dependents')),
+        map(exclude, arguments.pop('--exclude')),
+        map(upto, arguments.pop('--upto')),
+        map(upto, arguments.pop('TARGET'))
+    )]
+
+    if command_name == 'push':
+        args.append(not arguments.pop('--no-build'))
+
+    if arguments['--dump-file']:
+        dump_file = open(arguments['--dump-file'], 'w')
+        writer = fn.compose(
+            switch,
+            fn.tap(streamout(dump_file))
+        )
+    else:
+        writer = switch
+
+    for event in command(*args):
+        show_fn = mk_show(event)
+        show_fn(writer(event))
 
 
 @fn.curry
 def streamout(f, event):
-  f.write(json.dumps(event))
-  f.write('\n')
+    f.write(json.dumps(event))
+    f.write('\n')
 
 
 def exit(msg):
-  print(msg)
-  sys.exit(1)
+    print(msg)
+    sys.exit(1)
 
 
 def memo(f, arg, memos={}):
-  if arg in memos:
-    return memos[arg]
-  else:
-    memos[arg] = f(arg)
-    return memos[arg]
+    if arg in memos:
+        return memos[arg]
+    else:
+        memos[arg] = f(arg)
+        return memos[arg]
 
 
 def mk_show(evt):
-  if evt['event'] in ('build_msg', 'push') or 'error' in evt:
-    return memo(
-      highlight,
-      fn.maybe(fn.getattr('name'),
-      evt.get('container')) or evt.get('image'),
-    )
-  else:
-    return print
+    if evt['event'] in ('build_msg', 'push') or 'error' in evt:
+        return memo(
+            highlight,
+            fn.maybe(fn.getattr('name'),
+                     evt.get('container')) or evt.get('image'),
+        )
+    else:
+        return print
 
 colors = cycle(rainbow())
 
 
 def highlight(name):
-  color_fn = next(colors)
+    color_fn = next(colors)
 
-  def highlight_(msg):
-    print(color_fn(name) + " | " + msg)
-  return highlight_
+    def highlight_(msg):
+        print(color_fn(name) + " | " + msg)
+    return highlight_
 
 
 def switch(rec):
 
-  if 'stream' in rec:
-    return rec['stream'].strip('\n')
+    if 'stream' in rec:
+        return rec['stream'].strip('\n')
 
-  elif 'status' in rec:
-    if rec['status'].startswith('Downloading'):
-      term = '\r'
+    elif 'status' in rec:
+        if rec['status'].startswith('Downloading'):
+            term = '\r'
+        else:
+            term = ''
+
+        return '[STATUS] {0}: {1}{2}'.format(
+            rec.get('id', ''),
+            rec['status'],
+            term
+        )
+    elif 'error' in rec:
+        return '[ERROR] {0}\n'.format(rec['errorDetail']['message'])
+    elif rec['event'] == 'tag':
+        return 'Tagging {rec.image} to {name}:{rec.tag}'.format(
+            name=rec['container'].name,
+            rec=rec,
+        )
+    elif rec['event'] == 'removed':
+        return 'Untagging {image}:{tag}'.format(**rec)
     else:
-      term = ''
-
-    return '[STATUS] {0}: {1}{2}'.format(
-      rec.get('id', ''),
-      rec['status'],
-      term
-    )
-  elif 'error' in rec:
-    return '[ERROR] {0}\n'.format(rec['errorDetail']['message'])
-  elif rec['event'] == 'tag':
-    return 'Tagging {image} to {name}:{tag}'.format(name=rec['container'].name, **rec)
-  elif rec['event'] == 'removed':
-    return 'Untagging {image}:{tag}'.format(**rec)
-  else:
-    return json.dumps(rec)
+        return json.dumps(rec)
