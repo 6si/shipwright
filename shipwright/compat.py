@@ -34,11 +34,11 @@ else:
         _unhandled_types = {complex}
 
         def __init__(self, ob):
-           self._ob = ob
+            self._ob = ob
 
         def __lt__(self, other):
-            self, other = self._ob, other._ob  # we don't care about the wrapper
-
+            # we don't care about the wrapper
+            self, other = self._ob, other._ob
             # default_3way_compare is used only if direct comparison failed
             try:
                 return self < other
@@ -51,12 +51,11 @@ else:
                     return special_cmp(self, other)
 
             # explicitly raise again, Python 2 won't sort these either
+            template = 'no ordering relation is defined for {}'
             if type(self) in python2_sort_key._unhandled_types:
-                raise TypeError('no ordering relation is defined for {}'.format(
-                    type(self).__name__))
+                raise TypeError(template.format(type(self).__name__))
             if type(other) in python2_sort_key._unhandled_types:
-                raise TypeError('no ordering relation is defined for {}'.format(
-                    type(other).__name__))
+                raise TypeError(template.format(type(other).__name__))
 
             # same type but no ordering defined, go by id
             if type(self) is type(other):
@@ -68,9 +67,12 @@ else:
             if other is None:
                 return False
 
+            def typename(object):
+                return '' if isinstance(self, Number) else type(self).__name__
+
             # Sort by typename, but numbers are sorted before other types
-            self_tname = '' if isinstance(self, Number) else type(self).__name__
-            other_tname = '' if isinstance(other, Number) else type(other).__name__
+            self_tname = typename(self)
+            other_tname = typename(other)
 
             if self_tname != other_tname:
                 return self_tname < other_tname
