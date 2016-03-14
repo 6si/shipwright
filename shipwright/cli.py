@@ -106,7 +106,7 @@ from docker.utils import kwargs_from_env
 
 import git
 
-from shipwright import Shipwright
+from shipwright.base import Shipwright
 from shipwright.version import version
 
 
