@@ -8,3 +8,4 @@ env:
   - TOX_ENV=lint
 install: pip install tox
 script: tox -e $TOX_ENV
+cache: pip
