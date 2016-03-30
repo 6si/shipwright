@@ -46,9 +46,15 @@ def containers(name_func, path):
     container's name will be based on the namespace and directory
     where the Dockerfile was located.
 
-    >>> from shipwright.container import TEST_ROOT
     >>> from shipwright import fn
-    >>> containers(fn.identity, TEST_ROOT) # doctest: +ELLIPSIS
+    >>> test_root = getfixture('tmpdir').mkdir('containers')
+    >>> test_root.mkdir('container1').join('Dockerfile').write('FROM ubuntu')
+    >>> test_root.mkdir('container2').join('Dockerfile').write('FROM ubuntu')
+    >>> test_root.mkdir('container3').join('Dockerfile').write('FROM ubuntu')
+    >>> other = test_root.mkdir('other')
+    >>> _ = other.mkdir('subdir1')
+    >>> other.mkdir('subdir2').join('empty.txt').write('')
+    >>> containers(fn.identity, str(test_root)) # doctest: +ELLIPSIS
     [Container(...), Container(...), Container(...)]
     """
     return [
@@ -71,9 +77,10 @@ def container_from_path(name_func, path):
     >>> def name_func(path):
     ...   return 'shipwright_test/' + os.path.basename(os.path.dirname(path))
 
-    >>> from .container import TEST_ROOT
-    >>> path = os.path.join(TEST_ROOT, 'container1/Dockerfile')
-    >>> container = container_from_path(name_func, path)
+    >>> test_root = getfixture('tmpdir').mkdir('from_path')
+    >>> path = test_root.mkdir('container1').join('Dockerfile')
+    >>> path.write('FROM ubuntu')
+    >>> container = container_from_path(name_func, str(path))
     >>> container  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
     Container(name='shipwright_test/container1',
               dir_path='.../container1',
@@ -98,9 +105,15 @@ def build_files(build_root):
     Setup creates 3  dockerfiles under test root along with other
     files
 
-    >>> from .container import TEST_ROOT
+    >>> test_root = getfixture('tmpdir').mkdir('build_files')
+    >>> test_root.mkdir('container1').join('Dockerfile').write('FROM ubuntu')
+    >>> test_root.mkdir('container2').join('Dockerfile').write('FROM ubuntu')
+    >>> test_root.mkdir('container3').join('Dockerfile').write('FROM ubuntu')
+    >>> other = test_root.mkdir('other')
+    >>> _ = other.mkdir('subdir1')
+    >>> other.mkdir('subdir2').join('empty.txt').write('')
 
-    >>> files = build_files(TEST_ROOT)
+    >>> files = build_files(str(test_root))
     >>> sorted(files)  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ['.../container1/Dockerfile', '.../container2/Dockerfile',
     '.../container3/Dockerfile']
@@ -130,50 +143,13 @@ def name(docker_path):
 
 def parent(docker_path):
     """
-    >>> import io
-    >>> from .container import TEST_ROOT
-    >>> docker_path = os.path.join(TEST_ROOT, "Dockerfile")
-    >>> _ = open(docker_path, "w").write('FrOm    ubuntu')
+    >>> path = getfixture('tmpdir').mkdir('parent').join('Dockerfile')
+    >>> path.write('FrOm    ubuntu')
 
-    >>> parent(docker_path)
+    >>> parent(str(path))
     'ubuntu'
 
     """
     for l in open(docker_path):
         if l.strip().lower().startswith('from'):
             return l.split()[1]
-
-
-# Test Helpers ########################
-
-
-def setup(module):
-    import tempfile
-    TEST_ROOT = module.TEST_ROOT = tempfile.mkdtemp()
-
-    contents = {
-        'container1/Dockerfile': 'FROM ubuntu\nMAINTAINER bob',
-        'container2/Dockerfile':
-            'FROM shipwright_test/container1\nMAINTAINER bob',
-        'container3/Dockerfile':
-            'FROM shipwright_test/container2\nMAINTAINER bob',
-        'other/subdir1': None,
-        'other/subdir2/empty.txt': ''
-    }
-
-    for path, content in contents.items():
-        file_path = os.path.join(TEST_ROOT, path)
-        if content is None:
-            dir = file_path
-        else:
-            dir = os.path.dirname(file_path)
-        os.makedirs(dir)
-        if content is not None:
-            with(open(file_path, 'w')) as f:
-                f.write(content)
-
-
-def teardown(module):
-    import shutil
-    shutil.rmtree(module.TEST_ROOT)
-    del module.TEST_ROOT

@@ -34,12 +34,11 @@ def bundle_docker_dir(modify_docker_func, path):
     ./bogus1
     ./bogus2
 
-    >>> from shipwright import tar
-    >>> path = join(tar.TEST_ROOT, 'Dockerfile')
-    >>> _ = open(path, 'w').write(u'blah')
+    >>> test_root = getfixture('tmpdir').mkdir('tar')
+    >>> test_root.join('Dockerfile').write(u'blah')
 
-    >>> _ = open(join(tar.TEST_ROOT, 'bogus1'),'w').write('hi mom')
-    >>> _ = open(join(tar.TEST_ROOT, 'bogus2'), 'w').write('hello world')
+    >>> test_root.join('bogus1').write('hi mom')
+    >>> test_root.join('bogus2').write('hello world')
 
 
     Now we can call bundle_docker_dir passing it our append_bogus function to
@@ -47,7 +46,7 @@ def bundle_docker_dir(modify_docker_func, path):
     is stream of the contents encoded as a  tar file (the format Docker
     build expects)
 
-    >>> fileobj = bundle_docker_dir(append_bogus, tar.TEST_ROOT)
+    >>> fileobj = bundle_docker_dir(append_bogus, str(test_root))
 
     Normally we'd just pass this directly to the docker build command
     but for the purpose of this test, we'll use tarfile to decode the string
@@ -182,14 +181,3 @@ def mkcontext(tag, path):
     """
 
     return bundle_docker_dir(tag_parent(tag), path)
-
-
-# Test Helpers ########################
-
-def setup(module):
-    import tempfile
-    module.TEST_ROOT = tempfile.mkdtemp()
-
-
-def teardown(module):
-    del module.TEST_ROOT
