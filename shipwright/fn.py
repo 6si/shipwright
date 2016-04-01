@@ -63,8 +63,11 @@ def compose(*fns):
     ordered = list(reversed(fns))
     reduce = ft_reduce
 
+    def apply_(v, f):
+        return f(v)
+
     def compose_(v):
-        return reduce(lambda v, f: f(v), ordered, v)
+        return reduce(apply_, ordered, v)
     return compose_
 
 

@@ -2,7 +2,7 @@ import json
 
 from . import fn
 
-from .fn import compose, curry, maybe, flat_map, merge
+from .fn import curry, maybe, flat_map, merge
 
 from .tar import mkcontext
 
@@ -42,19 +42,27 @@ def build(client, git_rev, container):
     the same namespace)
     """
 
-    return fn.fmap(
-        compose(
-            merge(dict(event="build_msg", container=container, rev=git_rev)),
-            json.loads
-        ),
-        client.build(
-            fileobj=mkcontext(git_rev, container.dir_path),
-            rm=True,
-            custom_context=True,
-            stream=True,
-            tag='{0}:{1}'.format(container.name, git_rev)
-        )
+    merge_config = {
+        'event': "build_msg",
+        'container': container,
+        'rev': git_rev
+    }
+
+    def process_event_(evt):
+        if isinstance(evt, bytes):
+            evt = evt.decode('utf8')
+        evt_parsed = json.loads(evt)
+        return merge(merge_config)(evt_parsed)
+
+    build_evts = client.build(
+        fileobj=mkcontext(git_rev, container.dir_path),
+        rm=True,
+        custom_context=True,
+        stream=True,
+        tag='{0}:{1}'.format(container.name, git_rev)
     )
+
+    return (process_event_(evt) for evt in build_evts)
 
 
 @fn.composed(maybe(fn._0), fn.search(r'^Successfully built ([a-f0-9]+)\s*$'))
