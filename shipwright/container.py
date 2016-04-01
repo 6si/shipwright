@@ -50,12 +50,14 @@ def containers(name_func, path):
     >>> test_root = getfixture('tmpdir').mkdir('containers')
     >>> test_root.mkdir('container1').join('Dockerfile').write('FROM ubuntu')
     >>> test_root.mkdir('container2').join('Dockerfile').write('FROM ubuntu')
-    >>> test_root.mkdir('container3').join('Dockerfile').write('FROM ubuntu')
+    >>> container3 = test_root.mkdir('container3')
+    >>> container3.join('Dockerfile').write('FROM ubuntu')
+    >>> container3.join('Dockerfile-dev').write('FROM ubuntu')
     >>> other = test_root.mkdir('other')
     >>> _ = other.mkdir('subdir1')
     >>> other.mkdir('subdir2').join('empty.txt').write('')
     >>> containers(fn.identity, str(test_root)) # doctest: +ELLIPSIS
-    [Container(...), Container(...), Container(...)]
+    [Container(...), Container(...), Container(...), Container(...)]
     """
     return [
         container_from_path(name_func, container_path)
@@ -105,10 +107,12 @@ def build_files(build_root):
     Setup creates 3  dockerfiles under test root along with other
     files
 
-    >>> test_root = getfixture('tmpdir').mkdir('build_files')
+    >>> test_root = getfixture('tmpdir').mkdir('containers')
     >>> test_root.mkdir('container1').join('Dockerfile').write('FROM ubuntu')
     >>> test_root.mkdir('container2').join('Dockerfile').write('FROM ubuntu')
-    >>> test_root.mkdir('container3').join('Dockerfile').write('FROM ubuntu')
+    >>> container3 = test_root.mkdir('container3')
+    >>> container3.join('Dockerfile').write('FROM ubuntu')
+    >>> container3.join('Dockerfile-dev').write('FROM ubuntu')
     >>> other = test_root.mkdir('other')
     >>> _ = other.mkdir('subdir1')
     >>> other.mkdir('subdir2').join('empty.txt').write('')
@@ -116,12 +120,13 @@ def build_files(build_root):
     >>> files = build_files(str(test_root))
     >>> sorted(files)  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
     ['.../container1/Dockerfile', '.../container2/Dockerfile',
-    '.../container3/Dockerfile']
+    '.../container3/Dockerfile', '.../container3/Dockerfile-dev']
 
     """
     for root, dirs, files in os.walk(build_root):
-        if "Dockerfile" in files:
-            yield os.path.join(root, "Dockerfile")
+        for filename in files:
+            if filename.startswith('Dockerfile'):
+                yield os.path.join(root, filename)
 
 
 # path -> str
@@ -132,13 +137,29 @@ def name(docker_path):
 
     >>> name('/blah/foo/Dockerfile')
     'foo'
+
+    >>> name('/blah/foo/Dockerfile-dev')
+    'foo-dev'
+
+    >>> name('/blah/foo/not-a-Dockerfile-dev')
+    Traceback (most recent call last):
+    ...
+    ValueError: '/blah/foo/not-a-Dockerfile-dev' is not a valid Dockerfile
+
+    >>> name('/blah/foo/setup.py')
+    Traceback (most recent call last):
+    ...
+    ValueError: '/blah/foo/setup.py' is not a valid Dockerfile
     """
-    if not docker_path.endswith('Dockerfile'):
+
+    filename = os.path.basename(docker_path)
+    before, dockerfile, after = filename.partition('Dockerfile')
+    if dockerfile != 'Dockerfile' or before != '':
         raise ValueError(
             "'{}' is not a valid Dockerfile".format(docker_path)
         )
 
-    return os.path.basename(os.path.dirname(docker_path))
+    return os.path.basename(os.path.dirname(docker_path)) + after
 
 
 def parent(docker_path):

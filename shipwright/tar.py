@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import io
 import re
 import tarfile
+import os
 
 from os.path import join
 
@@ -11,7 +12,7 @@ from docker import utils
 from shipwright.fn import curry
 
 
-def bundle_docker_dir(modify_docker_func, path):
+def bundle_docker_dir(modify_docker_func, docker_path):
     """
     Tars up a directory using the normal docker.util.tar method but
     first relpaces the contents of the Dockerfile found at path with
@@ -35,7 +36,8 @@ def bundle_docker_dir(modify_docker_func, path):
     ./bogus2
 
     >>> test_root = getfixture('tmpdir').mkdir('tar')
-    >>> test_root.join('Dockerfile').write(u'blah')
+    >>> docker_path = test_root.join('Dockerfile')
+    >>> docker_path.write(u'blah')
 
     >>> test_root.join('bogus1').write('hi mom')
     >>> test_root.join('bogus2').write('hello world')
@@ -46,7 +48,7 @@ def bundle_docker_dir(modify_docker_func, path):
     is stream of the contents encoded as a  tar file (the format Docker
     build expects)
 
-    >>> fileobj = bundle_docker_dir(append_bogus, str(test_root))
+    >>> fileobj = bundle_docker_dir(append_bogus, str(docker_path))
 
     Normally we'd just pass this directly to the docker build command
     but for the purpose of this test, we'll use tarfile to decode the string
@@ -73,6 +75,7 @@ def bundle_docker_dir(modify_docker_func, path):
     # tar up the directory minus the Dockerfile,
     # TODO: respect .dockerignore
 
+    path = os.path.dirname(docker_path)
     try:
         ignore = filter(None, [
             p.strip() for p in open(join(path, '.dockerignore')).readlines()
@@ -80,18 +83,20 @@ def bundle_docker_dir(modify_docker_func, path):
     except IOError:
         ignore = []
 
+    dockerfile_name = os.path.basename(docker_path)
+
     # docker-py 1.6+ won't ignore the dockerfile
     # passing dockerfile='' works around the issuen
     # and lets us add the modified file when we're done.
-    ignore.append('Dockerfile')
+    ignore.append(dockerfile_name)
     fileobj = utils.tar(path, ignore, dockerfile='')
 
     # append a dockerfile after running it through a mutation
     # function first
     t = tarfile.open(fileobj=fileobj, mode='a')
-    dfinfo = tarfile.TarInfo('Dockerfile')
+    dfinfo = tarfile.TarInfo(dockerfile_name)
 
-    contents = modify_docker_func(open(join(path, 'Dockerfile')).read())
+    contents = modify_docker_func(open(join(path, dockerfile_name)).read())
     if not isinstance(contents, bytes):
         contents = contents.encode('utf8')
     dockerfile = io.BytesIO(contents)
@@ -170,7 +175,7 @@ def tag_parent(tag, docker_content):
 
 
 # str -> str -> fileobj
-def mkcontext(tag, path):
+def mkcontext(tag, docker_path):
     """
     Returns a streaming tarfile suitable for passing to docker build.
 
@@ -180,4 +185,4 @@ def mkcontext(tag, path):
     within the same git revision (bulid group) as the container being built.
     """
 
-    return bundle_docker_dir(tag_parent(tag), path)
+    return bundle_docker_dir(tag_parent(tag), docker_path)

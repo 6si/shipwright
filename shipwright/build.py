@@ -1,4 +1,5 @@
 import json
+import os
 
 from . import fn
 
@@ -55,11 +56,12 @@ def build(client, git_rev, container):
         return merge(merge_config)(evt_parsed)
 
     build_evts = client.build(
-        fileobj=mkcontext(git_rev, container.dir_path),
+        fileobj=mkcontext(git_rev, container.path),
         rm=True,
         custom_context=True,
         stream=True,
-        tag='{0}:{1}'.format(container.name, git_rev)
+        tag='{0}:{1}'.format(container.name, git_rev),
+        dockerfile=os.path.basename(container.path),
     )
 
     return (process_event_(evt) for evt in build_evts)
