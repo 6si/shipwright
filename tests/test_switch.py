@@ -1,7 +1,7 @@
 from shipwright.cli import switch
 
 
-example = {
+aux = {
     u'aux': {
         u'Digest': u'sha256:redacted',
         u'Size': 1337,
@@ -12,6 +12,14 @@ example = {
     u'progressDetail': {},
 }
 
+unhandled = {
+    'event': 'unhandled'
+}
+
+
+def test_aux_record():
+    assert switch(aux) is None
+
 
 def test_unhandled_record():
-    assert isinstance(switch(example), str)
+    assert switch(unhandled) == '{"event": "unhandled"}'

@@ -186,7 +186,9 @@ def main():
 
     for event in command(*args):
         show_fn = mk_show(event)
-        show_fn(writer(event))
+        formatted_message = writer(event)
+        if formatted_message is not None:
+            show_fn(writer(event))
 
 
 @fn.curry
@@ -254,5 +256,7 @@ def switch(rec):
         )
     elif rec['event'] == 'removed':
         return 'Untagging {image}:{tag}'.format(**rec)
+    elif rec['event'] == 'push' and 'aux' in rec:
+        return None
     else:
         return json.dumps(rec)
