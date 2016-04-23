@@ -1,10 +1,10 @@
-import json
-
 from . import fn
 
 from .fn import compose, curry, maybe, flat_map, merge
 
 from .tar import mkcontext
+
+from .compat import json_loads
 
 
 # (container->(str -> None))
@@ -45,7 +45,7 @@ def build(client, git_rev, container):
     return fn.fmap(
         compose(
             merge(dict(event="build_msg", container=container, rev=git_rev)),
-            json.loads
+            json_loads
         ),
         client.build(
             fileobj=mkcontext(git_rev, container.dir_path),
