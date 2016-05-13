@@ -1,3 +1,8 @@
+FORK
+----
+Dockhand is forked from Shipright, as I need these new features now!
+All of the commands etc, are exactly as in Shipright.
+
 Shipwright builds shared Docker images within a git repository in **the
 right order** and publishes them tagged with git's revision/branch
 information so you'll never loose track of an image's origin.
