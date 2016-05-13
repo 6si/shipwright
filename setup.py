@@ -23,9 +23,9 @@ long_description = read('README.rst')
 exec(open('shipwright/version.py').read())
 
 setup(
-    name='shipwright',
+    name='dockhand',
     version=version,
-    url='http://github.com/6si/shipwright/',
+    url='https://github.com/graingert/dockhand/',
     license='Apache Software License',
     author='Scott Robertson',
     tests_require=['nose'],
