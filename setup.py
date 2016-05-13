@@ -38,7 +38,7 @@ setup(
         'splicer>=0.2.0'
     ],
     author_email='scott@6sense.com',
-    description='Multi docker image build management',
+    description='The right way to build, tag and ship shared Docker containers.',
     long_description=long_description,
     packages=find_packages(),
     include_package_data=True,

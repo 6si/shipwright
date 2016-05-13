@@ -1,9 +1,3 @@
-+---------+-----------------------------------------------------------------------------+
-| layout  | title                                                                       |
-+=========+=============================================================================+
-| default | Shipwright | The right way to build, tag and ship shared Docker containers. |
-+---------+-----------------------------------------------------------------------------+
-
 Shipwright builds shared Docker images within a git repository in **the
 right order** and publishes them tagged with git's revision/branch
 information so you'll never loose track of an image's origin.
