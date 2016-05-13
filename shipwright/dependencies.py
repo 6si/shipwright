@@ -192,7 +192,7 @@ def breadth_first_iter(loc):
 @curry
 def is_target(name, target):
     """
-    >>> from . import Target
+    >>> from .base import Target
     >>> from .container import Container
 
     >>> target = Target(
@@ -335,7 +335,7 @@ def _names_list(targets):
 
 def setup_module(module):
     from .container import Container
-    from . import Target
+    from .base import Target
 
     module.targets = [
         Target(

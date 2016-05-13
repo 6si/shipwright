@@ -1,10 +1,12 @@
-import json
+import os
 
 from . import fn
 
-from .fn import compose, curry, maybe, flat_map, merge
+from .fn import curry, maybe, flat_map, merge
 
 from .tar import mkcontext
+
+from .compat import json_loads
 
 
 # (container->(str -> None))
@@ -42,19 +44,26 @@ def build(client, git_rev, container):
     the same namespace)
     """
 
-    return fn.fmap(
-        compose(
-            merge(dict(event="build_msg", container=container, rev=git_rev)),
-            json.loads
-        ),
-        client.build(
-            fileobj=mkcontext(git_rev, container.dir_path),
-            rm=True,
-            custom_context=True,
-            stream=True,
-            tag='{0}:{1}'.format(container.name, git_rev)
-        )
+    merge_config = {
+        'event': "build_msg",
+        'container': container,
+        'rev': git_rev
+    }
+
+    def process_event_(evt):
+        evt_parsed = json_loads(evt)
+        return merge(merge_config)(evt_parsed)
+
+    build_evts = client.build(
+        fileobj=mkcontext(git_rev, container.path),
+        rm=True,
+        custom_context=True,
+        stream=True,
+        tag='{0}:{1}'.format(container.name, git_rev),
+        dockerfile=os.path.basename(container.path),
     )
+
+    return (process_event_(evt) for evt in build_evts)
 
 
 @fn.composed(maybe(fn._0), fn.search(r'^Successfully built ([a-f0-9]+)\s*$'))

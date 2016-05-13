@@ -106,7 +106,7 @@ from docker.utils import kwargs_from_env
 
 import git
 
-from shipwright import Shipwright
+from shipwright.base import Shipwright
 from shipwright.version import version
 
 
@@ -120,9 +120,15 @@ def main():
     arguments = docopt(
         __doc__, options_first=False, version='Shipwright ' + version,
     )
+    return run(
+        repo=git.Repo(os.getcwd()),
+        arguments=arguments,
+        client_cfg=kwargs_from_env(),
+        environ=os.environ,
+    )
 
-    repo = git.Repo(os.getcwd())
 
+def run(repo, arguments, client_cfg, environ):
     try:
         config = json.load(open(
             os.path.join(repo.working_dir, '.shipwright.json')
@@ -131,7 +137,7 @@ def main():
         config = {
             'namespace': (
                 arguments['DOCKER_HUB_ACCOUNT'] or
-                os.environ.get('SW_NAMESPACE')
+                environ.get('SW_NAMESPACE')
             )
         }
 
@@ -148,7 +154,6 @@ def main():
     if arguments['--x-assert-hostname']:
         assert_hostname = not arguments['--x-assert-hostname']
 
-    client_cfg = kwargs_from_env()
     fn.maybe(
         fn.setattr('assert_hostname', assert_hostname),
         client_cfg.get('tls')
@@ -186,7 +191,9 @@ def main():
 
     for event in command(*args):
         show_fn = mk_show(event)
-        show_fn(writer(event))
+        formatted_message = writer(event)
+        if formatted_message is not None:
+            show_fn(writer(event))
 
 
 @fn.curry
@@ -248,11 +255,14 @@ def switch(rec):
     elif 'error' in rec:
         return '[ERROR] {0}\n'.format(rec['errorDetail']['message'])
     elif rec['event'] == 'tag':
-        return 'Tagging {rec.image} to {name}:{rec.tag}'.format(
+        return 'Tagging {image} to {name}:{tag}'.format(
             name=rec['container'].name,
-            rec=rec,
+            image=rec['image'],
+            tag=rec['tag'],
         )
     elif rec['event'] == 'removed':
         return 'Untagging {image}:{tag}'.format(**rec)
+    elif rec['event'] == 'push' and 'aux' in rec:
+        return None
     else:
         return json.dumps(rec)
