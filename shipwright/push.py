@@ -1,7 +1,7 @@
+from __future__ import absolute_import
+
 from . import compat
-from .fn import (
-    compose, curry, fmap, flat_map, merge
-)
+from .fn import compose, curry, flat_map, fmap, merge
 
 
 @curry

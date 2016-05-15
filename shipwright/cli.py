@@ -91,29 +91,24 @@ Examples:
 
 
 """
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
-
-import sys
-import os
 import json
-from itertools import cycle, chain
+import os
+import sys
+from itertools import chain, cycle
 
-from docopt import docopt
 import docker
-from docker.utils import kwargs_from_env
-
 import git
+from docker.utils import kwargs_from_env
+from docopt import docopt
 
-from shipwright.base import Shipwright
-from shipwright.version import version
-
-
-from shipwright.dependencies import dependents, exact, exclude, upto
-from shipwright.colors import rainbow
-from shipwright.fn import _0
 from shipwright import fn
+from shipwright.base import Shipwright
+from shipwright.colors import rainbow
+from shipwright.dependencies import dependents, exact, exclude, upto
+from shipwright.fn import _0
+from shipwright.version import version
 
 
 def main():

@@ -2,19 +2,10 @@ from __future__ import absolute_import
 
 from collections import namedtuple
 
-from . import build
-from . import push
-from . import purge
-from . import fn
-from . import commits
-from . import docker
-
-from . import dependencies
-
-from . import query
-
-from .container import containers as list_containers, container_name
-from .fn import curry, compose
+from . import build, commits, dependencies, docker, fn, purge, push, query
+from .container import containers as list_containers
+from .container import container_name
+from .fn import compose, curry
 
 
 class Shipwright(object):

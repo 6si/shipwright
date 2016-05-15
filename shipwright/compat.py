@@ -1,5 +1,7 @@
-import sys
+from __future__ import absolute_import
+
 import json
+import sys
 from numbers import Number
 
 PY2 = sys.version_info[0] == 2

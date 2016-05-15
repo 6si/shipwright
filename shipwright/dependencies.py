@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-from collections import namedtuple
 import functools
+from collections import namedtuple
 
 import zipper
 

@@ -4,26 +4,23 @@
 # http://functionaltalks.org/2013/05/27/brian-lonsdorf-hey-underscore-youre-doing-it-wrong/
 # to understand why
 
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function
+
+import inspect
+import re
+from functools import reduce as ft_reduce
+from functools import partial, wraps
+from itertools import chain
 
 try:
     import builtins as __builtin__
 except ImportError:
     import __builtin__
 
-
-from itertools import chain
-
 try:
     from itertools import imap as itertools_imap
 except ImportError:
     itertools_imap = map
-
-from functools import partial, wraps, reduce as ft_reduce
-import inspect
-
-import re
 
 
 def curry(f):

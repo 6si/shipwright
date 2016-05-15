@@ -2,13 +2,13 @@
 # query - uses splicer to simplify complex data manipulations
 #
 
-from splicer import Field
+from __future__ import absolute_import
+
 import splicer
+from splicer import Field
 from splicer.adapters.dict_adapter import DictAdapter
 
-from . import commits
-from . import docker
-from . import compat
+from . import commits, compat, docker
 
 COMMIT_SCHEMA = [
     dict(name="branch", type="STRING"),

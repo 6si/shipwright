@@ -5,7 +5,6 @@ from collections import namedtuple
 
 from .fn import curry
 
-
 Container = namedtuple('Container', 'name,dir_path,path,parent')
 
 
