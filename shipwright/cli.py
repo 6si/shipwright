@@ -125,22 +125,22 @@ def main():
 def run(repo, arguments, client_cfg, environ):
     try:
         config = json.load(open(
-            os.path.join(repo.working_dir, '.shipwright.json')
+            os.path.join(repo.working_dir, '.shipwright.json'),
         ))
     except OSError:
         config = {
             'namespace': (
                 arguments['DOCKER_HUB_ACCOUNT'] or
                 environ.get('SW_NAMESPACE')
-            )
+            ),
         }
 
     if config['namespace'] is None:
         exit(
-            "Please specify your docker hub account in\n"
-            "the .shipwright.json config file,\n "
-            "the command line or set SW_NAMESPACE.\n"
-            "Run shipwright --help for more information."
+            'Please specify your docker hub account in\n'
+            'the .shipwright.json config file,\n '
+            'the command line or set SW_NAMESPACE.\n'
+            'Run shipwright --help for more information.',
         )
 
     assert_hostname = config.get('assert_hostname')
@@ -150,14 +150,14 @@ def run(repo, arguments, client_cfg, environ):
 
     fn.maybe(
         fn.setattr('assert_hostname', assert_hostname),
-        client_cfg.get('tls')
+        client_cfg.get('tls'),
     )
 
     client = docker.Client(version='1.18', **client_cfg)
     commands = ['build', 'push', 'purge']
     # {'publish': false, 'purge': true, ...} = 'purge'
     command_names = [c for c in commands if arguments[c]]
-    command_name = command_names[0] if command_names else "build"
+    command_name = command_names[0] if command_names else 'build'
 
     command = getattr(Shipwright(config, repo, client), command_name)
 
@@ -166,7 +166,7 @@ def run(repo, arguments, client_cfg, environ):
         map(dependents, arguments.pop('--dependents')),
         map(exclude, arguments.pop('--exclude')),
         map(upto, arguments.pop('--upto')),
-        map(upto, arguments.pop('TARGET'))
+        map(upto, arguments.pop('TARGET')),
     )]
 
     if command_name == 'push':
@@ -220,7 +220,7 @@ def highlight(name):
     color_fn = next(colors)
 
     def highlight_(msg):
-        print(color_fn(name) + " | " + msg)
+        print(color_fn(name) + ' | ' + msg)
     return highlight_
 
 
@@ -238,7 +238,7 @@ def switch(rec):
         return '[STATUS] {0}: {1}{2}'.format(
             rec.get('id', ''),
             rec['status'],
-            term
+            term,
         )
     elif 'error' in rec:
         return '[ERROR] {0}\n'.format(rec['errorDetail']['message'])
