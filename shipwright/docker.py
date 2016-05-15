@@ -1,6 +1,7 @@
 from __future__ import absolute_import
+
 from shipwright import fn
-from shipwright.fn import _1, curry, compose, flatten
+from shipwright.fn import _1, compose, curry, flatten
 
 
 @fn.composed(_1, fn.split(':'))

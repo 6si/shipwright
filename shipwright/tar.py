@@ -1,10 +1,9 @@
 from __future__ import absolute_import
 
 import io
+import os
 import re
 import tarfile
-import os
-
 from os.path import join
 
 from docker import utils

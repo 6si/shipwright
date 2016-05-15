@@ -1,12 +1,11 @@
+from __future__ import absolute_import
+
 import os
 
 from . import fn
-
-from .fn import curry, maybe, flat_map, merge
-
-from .tar import mkcontext
-
 from .compat import json_loads
+from .fn import curry, flat_map, maybe, merge
+from .tar import mkcontext
 
 
 # (container->(str -> None))

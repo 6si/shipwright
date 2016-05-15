@@ -1,9 +1,11 @@
+from __future__ import absolute_import
+
 import shutil
 
-import pkg_resources
-import git
-from docker import utils as docker_utils
 import docker
+import git
+import pkg_resources
+from docker import utils as docker_utils
 
 from shipwright import cli as shipw_cli
 

@@ -1,5 +1,6 @@
-from shipwright.cli import switch
+from __future__ import absolute_import
 
+from shipwright.cli import switch
 
 aux = {
     u'aux': {

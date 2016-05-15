@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-from .fn import curry, maybe, identity
 from . import compat
+from .fn import curry, identity, maybe
 
 
 # Tag = str

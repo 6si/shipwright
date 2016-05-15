@@ -1,11 +1,11 @@
-from __future__ import print_function
-from setuptools import setup, find_packages
+from __future__ import absolute_import, print_function
 
-import io
 import codecs
+import io
 import os
 import sys
 
+from setuptools import find_packages, setup
 
 here = os.path.abspath(os.path.dirname(__file__))
 
