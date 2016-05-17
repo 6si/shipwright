@@ -2,10 +2,10 @@ from __future__ import absolute_import
 
 from collections import namedtuple
 
-from . import build, commits, dependencies, docker, fn, purge, push, query
+from . import build, commits, dependencies, docker, purge, push, query
 from .container import containers as list_containers
 from .container import container_name
-from .fn import compose, curry
+from .fn import curry
 
 
 class Shipwright(object):
@@ -37,13 +37,14 @@ class Shipwright(object):
             docker.tags_from_containers(client, containers)  # list of tags
         ))
 
-        current_rel = map(
-            compose(
-                commits.last_commit_relative(self.source_control, commit_map),
-                fn.getattr('dir_path')
-            ),
-            containers
-        )
+        current_rel = [
+            commits.last_commit_relative(
+                self.source_control,
+                commit_map,
+                c.dir_path,
+            )
+            for c in containers
+        ]
 
         # [[Container], [Tag], [Int], [Int]] -> [Target]
         return [
@@ -137,14 +138,13 @@ class Shipwright(object):
 
         """
         branch = self.source_control.active_branch.name
-        tree = dependencies.eval(specifiers, self.targets())
 
-        push_tree = compose(
-            push.do_push(self.docker_client),
-            # [Target] -> [[ImageName, Tag]]
-            fn.map(fn.juxt(fn.getattr('name'), fn.getattr('last_built_ref'))),
-            expand(branch)
-        )
+        def push_tree(tree):
+            flat_tree = expand(branch, tree)
+            names_and_tags = [(x.name, x.last_built_ref) for x in flat_tree]
+            return push.do_push(self.docker_client, names_and_tags)
+
+        tree = dependencies.eval(specifiers, self.targets())
 
         if build:
             return bind(self.build_tree, push_tree, tree)
@@ -181,14 +181,14 @@ def expand(branch, tree):
     ]
 
     """
-    return fn.flat_map(
-        fn.juxt(
-            fn.identity,
-            fn.replace(last_built_ref=branch),
-            fn.replace(last_built_ref="latest")
-        ),
-        dependencies.brood(tree)
-    )
+    return [
+        [
+            d,
+            d._replace(last_built_ref=branch),
+            d._replace(last_built_ref='latest'),
+        ]
+        for d in dependencies.brood(tree)
+    ]
 
 
 def unit(tree):

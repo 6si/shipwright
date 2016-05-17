@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from . import compat
-from .fn import compose, curry, flat_map, fmap, merge
+from .fn import curry, flat_map
 
 
 @curry
@@ -12,14 +12,11 @@ def do_push(client, images):
 @curry
 def push(client, image_tag):
     image, tag = image_tag
-    return fmap(
-        compose(
-            merge(dict(event="push", image=image)),
-            compat.json_loads,
-        ),
-        client.push(
-            image,
-            tag,
-            stream=True
-        )
-    )
+
+    def fmt(s):
+        d = compat.json_loads(s)
+        d.update({'event': 'push', 'image': image})
+        return d
+
+    results = client.push(image, tag, stream=True)
+    return [fmt(r) for r in results]

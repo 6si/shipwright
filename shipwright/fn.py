@@ -7,7 +7,6 @@
 from __future__ import absolute_import, print_function
 
 import inspect
-import re
 from functools import reduce as ft_reduce
 from functools import partial, wraps
 from itertools import chain
@@ -16,6 +15,7 @@ try:
     import builtins as __builtin__
 except ImportError:
     import __builtin__
+
 
 try:
     from itertools import imap as itertools_imap
@@ -68,44 +68,6 @@ def compose(*fns):
     return compose_
 
 
-def composed(*fns):
-    """
-    Decorater to compose functions and write a doc test at the same time.
-    The function being decorated exists simply to document the composition.
-
-    For example if we have these 3 functions
-
-    >>> def first(a):
-    ...   return a + 2
-
-    >>> def second(b):
-    ...   return b + 10
-
-    >>> def third(c):
-    ...   return c - 5
-
-
-    We can compose them with decorator, note the body of bogus_func
-    is never called.
-
-    >>> @composed(first, second, third)
-    ... def bogus_func(int):
-    ...    "... insert a doc test here ..."
-
-
-    """
-    def dec(f):
-        return wraps(f)(compose(*fns))
-    return dec
-
-
-def apply(fn):
-    @wraps(fn)
-    def _(arr):
-        return fn(*arr)
-    return _
-
-
 def juxt(*fns):
     """
     >>> juxt(len)("blah")
@@ -118,16 +80,6 @@ def juxt(*fns):
     def _(val):
         return [fn(val) for fn in fns]
     return _
-
-
-@curry
-def tap(fn, val):
-    fn(val)
-    return val
-
-show = tap(print)
-
-print_fun = print
 
 
 @curry
@@ -247,18 +199,6 @@ def startswith(s1, s2):
     return s2.startswith(s1)
 
 
-def search(pattern, string=None):
-    def search(string):
-        m = re.search(pattern, string)
-        if m:
-            return m.groups()
-
-    if string is None:
-        return search
-    else:
-        return search(string)
-
-
 # sequence funcs
 flatten = chain.from_iterable
 
@@ -279,63 +219,6 @@ def flat_map(f, arr):
     return flatten(fmap(f, arr))
 
 
-@curry
-def filter(fn, sequence):
-    return list(__builtin__.filter(fn, sequence))
-
-
-def empty(seq):
-    return len(seq) == 0
-
-
-def first(arr):
-    """
-    >>> first([1,2,3])
-    1
-    """
-    return arr[0]
-
-
-def last(arr):
-    """
-    >>> last([1,2,3])
-    3
-    """
-    return arr[-1]
-
-
-@curry
-def slice(start, stop, seq):
-    return seq[start:stop]
-
-
-@curry
-def get(index, arr):
-    """
-    Returns the item in the array at the given index or None.
-    """
-    if index > len(arr) - 1:
-        return None
-    else:
-        return arr[index]
-
-
-def const(val):
-    return lambda x: val
-
-# Convienance getters
-_0 = get(0)
-_1 = get(1)
-_2 = get(2)
-_3 = get(3)
-_4 = get(4)
-_5 = get(5)
-_6 = get(6)
-_7 = get(7)
-_8 = get(8)
-_9 = get(9)
-
-
 # Dict functions
 @curry
 def getitem(key, hashmap):
@@ -352,10 +235,6 @@ def merge(d1, d2):
 # object functions
 
 
-def identity(obj):
-    return obj
-
-
 @curry
 def getattr(attr, obj):
     return __builtin__.getattr(obj, attr)
@@ -365,36 +244,3 @@ def getattr(attr, obj):
 def setattr(attr, value, obj):
     __builtin__.setattr(obj, attr, value)
     return obj
-
-
-# namedtuples
-def replace(**kw):
-    def _replace(nt):
-        return nt._replace(**kw)
-    return _replace
-
-
-@curry
-def debug(fn, value):
-    """
-    Pause the python interpreter prior to calling a funtion. Useful
-    during development to inspect composed functions.
-
-    Imagine you have some long chain of composed functions
-
-    composed_fun = compose(some, long, function, chain)
-
-    You can stick a debug in the middle of it to inspect the result
-    before and after the function to the left is called.
-
-    So in this case wrapping function with a debug alows us to
-    inspect the input and output of it prior to being passed
-    to the long function.
-
-    composed_fun = compose(some, long, debug(function), chain)
-
-    """
-    import pdb
-    pdb.set_trace()
-    ret = fn(value)
-    return ret
