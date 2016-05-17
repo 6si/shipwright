@@ -20,9 +20,9 @@ class Shipwright(object):
             container_name(
                 self.namespace,
                 self.config.get('names', {}),
-                self.source_control.working_dir
+                self.source_control.working_dir,
             ),
-            self.source_control.working_dir
+            self.source_control.working_dir,
         )
 
     def targets(self):
@@ -34,7 +34,7 @@ class Shipwright(object):
 
         last_built_ref, last_built_rel = zip(*map(
             commits.max_commit(commit_map),
-            docker.tags_from_containers(client, containers)  # list of tags
+            docker.tags_from_containers(client, containers),  # list of tags
         ))
 
         current_rel = [
@@ -51,7 +51,7 @@ class Shipwright(object):
             Target(container, built_ref, built_rel, current_rel, None)
 
             for container, built_ref, built_rel, current_rel in zip(
-                containers, last_built_ref, last_built_rel, current_rel
+                containers, last_built_ref, last_built_rel, current_rel,
             )
 
             if current_rel is not None
@@ -104,7 +104,7 @@ class Shipwright(object):
         latest_events = docker.tag_containers(
             self.docker_client,
             all_images,
-            "latest",
+            'latest',
         )
         for evt in latest_events:
             yield evt

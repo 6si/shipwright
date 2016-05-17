@@ -6,7 +6,7 @@ aux = {
     u'aux': {
         u'Digest': u'sha256:redacted',
         u'Size': 1337,
-        u'Tag': u'redacted'
+        u'Tag': u'redacted',
     },
     'event': 'push',
     'image': u'redacted/redacted',
@@ -14,7 +14,7 @@ aux = {
 }
 
 unhandled = {
-    'event': 'unhandled'
+    'event': 'unhandled',
 }
 
 

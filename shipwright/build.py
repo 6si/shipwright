@@ -46,9 +46,9 @@ def build(client, git_rev, container):
     """
 
     merge_config = {
-        'event': "build_msg",
+        'event': 'build_msg',
         'container': container,
-        'rev': git_rev
+        'rev': git_rev,
     }
 
     def process_event_(evt):

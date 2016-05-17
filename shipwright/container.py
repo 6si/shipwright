@@ -93,7 +93,7 @@ def container_from_path(name_func, path):
         name=name_func(path),
         dir_path=os.path.dirname(path),
         path=path,
-        parent=parent(path)
+        parent=parent(path),
     )
 
 
@@ -155,7 +155,7 @@ def name(docker_path):
     before, dockerfile, after = filename.partition('Dockerfile')
     if dockerfile != 'Dockerfile' or before != '':
         raise ValueError(
-            "'{}' is not a valid Dockerfile".format(docker_path)
+            "'{}' is not a valid Dockerfile".format(docker_path),
         )
 
     return os.path.basename(os.path.dirname(docker_path)) + after

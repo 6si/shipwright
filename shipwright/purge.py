@@ -8,13 +8,13 @@ def do_purge(client, images):
         image, tag = row
         try:
             client.remove_image(
-                "{}:{}".format(image, tag), force=True, noprune=False,
+                '{}:{}'.format(image, tag), force=True, noprune=False,
             )
-            yield dict(event="removed", image=image, tag=tag)
+            yield dict(event='removed', image=image, tag=tag)
         except Exception as e:
             yield dict(
-                event="error",
+                event='error',
                 error=e,
                 container=Container(image, None, None, None),
-                errorDetail=dict(message=str(e))
+                errorDetail=dict(message=str(e)),
             )

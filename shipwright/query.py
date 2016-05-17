@@ -11,14 +11,14 @@ from splicer.adapters.dict_adapter import DictAdapter
 from . import commits, compat, docker
 
 COMMIT_SCHEMA = [
-    dict(name="branch", type="STRING"),
-    dict(name="commit", type="STRING"),
-    dict(name="rel_commit", type="INTEGER")
+    dict(name='branch', type='STRING'),
+    dict(name='commit', type='STRING'),
+    dict(name='rel_commit', type='INTEGER'),
 ]
 
 IMAGE_SCHEMA = [
-    dict(name="image", type="STRING"),
-    dict(name="tag", type="STRING")
+    dict(name='image', type='STRING'),
+    dict(name='tag', type='STRING'),
 ]
 
 
@@ -53,23 +53,23 @@ def dataset(source_control, docker_client, containers):
 
     dataset = splicer.DataSet()
     dataset.add_aggregate(
-        "maxwhen",
+        'maxwhen',
         func=maxwhen,
-        returns=Field(name="min", type="STRING"),
+        returns=Field(name='min', type='STRING'),
         initial=(None, None),
-        finalize=lambda state: state[0]
+        finalize=lambda state: state[0],
     )
 
     # data collected at the start of the program
     static_data = DictAdapter(
         branch=dict(
             schema=dict(fields=COMMIT_SCHEMA),
-            rows=branches(source_control)
+            rows=branches(source_control),
         ),
         image=dict(
             schema=dict(fields=IMAGE_SCHEMA),
-            rows=images(docker_client, containers)
-        )
+            rows=images(docker_client, containers),
+        ),
     )
 
     dataset.add_adapter(static_data)

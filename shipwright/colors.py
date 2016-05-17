@@ -9,7 +9,7 @@ NAMES = [
     'blue',
     'magenta',
     'cyan',
-    'white'
+    'white',
 ]
 
 

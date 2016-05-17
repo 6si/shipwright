@@ -14,7 +14,7 @@ def union(inclusions, tree):
         # for each tree func run it, convert to set
         lambda p, f: p | set(f(tree)),
         inclusions,
-        set()
+        set(),
     )
 
     return make_tree(targets)
@@ -346,7 +346,7 @@ def setup_module(module):
             'abc',
             3,
             3,
-            None
+            None,
         ),
         Target(
             Container(
@@ -356,7 +356,7 @@ def setup_module(module):
             'abc',
             3,
             3,
-            None
+            None,
         ),
         Target(
             Container(
@@ -366,7 +366,7 @@ def setup_module(module):
             'abc',
             3,
             3,
-            None
+            None,
         ),
         Target(
             Container(
@@ -376,6 +376,6 @@ def setup_module(module):
             'abc',
             3,
             3,
-            None
-        )
+            None,
+        ),
     ]

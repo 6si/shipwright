@@ -45,11 +45,11 @@ def decode_tag(tag):
 def tag_containers(client, containers, new_ref):
     for container in containers:
         tag = encode_tag(new_ref)
-        image = container.name + ":" + container.last_built_ref
+        image = container.name + ':' + container.last_built_ref
         client.tag(
             image,
             container.name,
             tag=tag,
-            force=True
+            force=True,
         )
-        yield dict(event="tag", container=container, image=image, tag=tag)
+        yield dict(event='tag', container=container, image=image, tag=tag)
