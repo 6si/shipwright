@@ -55,7 +55,7 @@ def containers(name_func, path):
     >>> other = test_root.mkdir('other')
     >>> _ = other.mkdir('subdir1')
     >>> other.mkdir('subdir2').join('empty.txt').write('')
-    >>> containers(fn.identity, str(test_root)) # doctest: +ELLIPSIS
+    >>> containers(lambda x: x, str(test_root)) # doctest: +ELLIPSIS
     [Container(...), Container(...), Container(...), Container(...)]
     """
     return [

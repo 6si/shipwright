@@ -1,11 +1,13 @@
 from __future__ import absolute_import
 
 import os
+import re
 
-from . import fn
 from .compat import json_loads
-from .fn import curry, flat_map, maybe, merge
+from .fn import curry, flat_map, merge
 from .tar import mkcontext
+
+RE_SUCCESS = re.compile(r'^Successfully built ([a-f0-9]+)\s*$')
 
 
 # (container->(str -> None))
@@ -65,20 +67,26 @@ def build(client, git_rev, container):
     return (process_event_(evt) for evt in build_evts)
 
 
-@fn.composed(maybe(fn._0), fn.search(r'^Successfully built ([a-f0-9]+)\s*$'))
 def success(line):
     """
     >>> success('Blah')
     >>> success('Successfully built 1234\\n')
     '1234'
     """
+    match = RE_SUCCESS.search(line)
+    if match:
+        return match.group(1)
+    return None
 
 
-@fn.composed(fn.first, fn.filter(None), fn.map(success))
 def success_from_stream(stream):
     """
-
     >>> stream = iter(('Blah', 'Successfully built 1234\\n'))
     >>> success_from_stream(stream)
     '1234'
     """
+    for x in stream:
+        result = success(x)
+        if result:
+            return result
+    return None
