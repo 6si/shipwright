@@ -131,7 +131,7 @@ def process_arguments(repo, arguments, client_cfg, environ):
         config = json.load(open(
             os.path.join(repo.working_dir, '.shipwright.json'),
         ))
-    except OSError:
+    except IOError:
         config = {
             'namespace': (
                 arguments['--account'] or
