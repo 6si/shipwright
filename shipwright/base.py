@@ -1,11 +1,11 @@
 from __future__ import absolute_import
 
 from collections import namedtuple
+import functools
 
 from . import build, commits, dependencies, docker, purge, push, query
 from .container import containers as list_containers
 from .container import container_name
-from .fn import curry
 
 
 class Shipwright(object):
@@ -16,12 +16,14 @@ class Shipwright(object):
         self.config = config
 
     def containers(self):
+        cn = functools.partial(
+            container_name,
+            self.namespace,
+            self.config.get('names', {}),
+            self.source_control.working_dir,
+        )
         return list_containers(
-            container_name(
-                self.namespace,
-                self.config.get('names', {}),
-                self.source_control.working_dir,
-            ),
+            cn,
             self.source_control.working_dir,
         )
 
@@ -32,8 +34,13 @@ class Shipwright(object):
 
         commit_map = commits.mkmap(self.source_control)
 
+        max_commit = functools.partial(
+            commits.max_commit,
+            commit_map,
+        )
+
         last_built_ref, last_built_rel = zip(*map(
-            commits.max_commit(commit_map),
+            max_commit,
             docker.tags_from_containers(client, containers),  # list of tags
         ))
 
@@ -165,7 +172,6 @@ class Shipwright(object):
         return push.do_push(self.docker_client, images)
 
 
-@curry
 def expand(branch, tree):
     """
     Flattens the tree to the list and triples each entry.
@@ -191,7 +197,6 @@ def expand(branch, tree):
 
 
 # (Tree -> [Target]) -> (Tree -> [Target]) -> [Target]
-@curry
 def bind(a, b, tree):
     """
     Glues two Shipwright commands (functions) together.

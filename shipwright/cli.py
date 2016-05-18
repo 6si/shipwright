@@ -99,6 +99,8 @@ import json
 import os
 import sys
 from itertools import chain, cycle
+import functools
+import operator
 
 import docker
 import git
@@ -146,22 +148,24 @@ def process_arguments(repo, arguments, client_cfg, environ):
     assert_hostname = config.get('assert_hostname')
     if arguments['--x-assert-hostname']:
         assert_hostname = not arguments['--x-assert-hostname']
-    fn.maybe(
-        fn.setattr('assert_hostname', assert_hostname),
-        client_cfg.get('tls'),
-    )
+
+    tls_config = client_cfg.get('tls')
+    if tls_config is not None:
+        tls_config.assert_hostname = assert_hostname
+
     client = docker.Client(version='1.18', **client_cfg)
     commands = ['build', 'push', 'purge']
     # {'publish': false, 'purge': true, ...} = 'purge'
     command_names = [c for c in commands if arguments[c]]
     command_name = command_names[0] if command_names else 'build'
+    pt = functools.partial
 
     args = [chain(
-        map(exact, arguments.pop('--exact')),
-        map(dependents, arguments.pop('--dependents')),
-        map(exclude, arguments.pop('--exclude')),
-        map(upto, arguments.pop('--upto')),
-        map(upto, arguments.pop('TARGET')),
+        [pt(exact, target) for target in arguments.pop('--exact')],
+        [pt(dependents, target) for target in arguments.pop('--dependents')],
+        [pt(exclude, target) for target in arguments.pop('--exclude')],
+        [pt(upto, target) for target in arguments.pop('--upto')],
+        [pt(upto, target) for target in arguments.pop('TARGET')],
     )]
     if command_name == 'push':
         args.append(not arguments.pop('--no-build'))
@@ -207,10 +211,15 @@ def memo(f, arg, memos={}):
 
 def mk_show(evt):
     if evt['event'] in ('build_msg', 'push') or 'error' in evt:
+        name = None
+        container = evt.get('container')
+        if container is not None:
+            name = container.name
+        else:
+            name = evt.get('image')
         return memo(
             highlight,
-            fn.maybe(fn.getattr('name'),
-                     evt.get('container')) or evt.get('image'),
+            name,
         )
     else:
         return print

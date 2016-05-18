@@ -11,45 +11,6 @@ from functools import reduce as ft_reduce
 from functools import partial, wraps
 from itertools import chain
 
-try:
-    import builtins as __builtin__
-except ImportError:
-    import __builtin__
-
-
-try:
-    from itertools import imap as itertools_imap
-except ImportError:
-    itertools_imap = map
-
-
-def curry(f):
-    """
-    Decorator to autocurry a function.
-
-    >>> @curry
-    ... def f(x,y,z):
-    ...   return x+y+z
-
-    >>> 6 ==  f(1,2,3) == f(1)(2,3) == f(1)(2)(3) == f(1)()(2)()(3)
-    True
-    """
-    if isinstance(f, partial):
-        num_args = len(inspect.getargspec(f.func)[0]) - len(f.args)
-        args = f.args
-        f = f.func
-    else:
-        num_args = len(inspect.getargspec(f)[0])
-        args = []
-
-    @wraps(f)
-    def curry_(*a, **k):
-        if len(a) == num_args:
-            return f(*chain(args, a), **k)
-        else:
-            return curry(partial(f, *chain(args, a), **k))
-    return curry_
-
 
 def compose(*fns):
     """
@@ -82,48 +43,7 @@ def juxt(*fns):
     return _
 
 
-# logic functions
-
-
-@curry
-def maybe(fn, value):
-    """
-    Given a function and a value. If the value is not None
-    apply the value to the function and return the result.
-    """
-    if value is None:
-        return None
-    else:
-        return fn(value)
-
-
-@curry
-def fmap(fn, sequence):
-    return itertools_imap(fn, sequence)
-
-
-# (a -> [b]) -> [a] -> [b]
-@curry
-def flat_map(f, arr):
-    return chain.from_iterable(fmap(f, arr))
-
-
-@curry
 def merge(d1, d2):
     d = d1.copy()
     d.update(d2)
     return d
-
-
-# object functions
-
-
-@curry
-def getattr(attr, obj):
-    return __builtin__.getattr(obj, attr)
-
-
-@curry
-def setattr(attr, value, obj):
-    __builtin__.setattr(obj, attr, value)
-    return obj

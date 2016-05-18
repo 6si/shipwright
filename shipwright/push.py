@@ -1,15 +1,14 @@
 from __future__ import absolute_import
 
 from . import compat
-from .fn import curry, flat_map
 
 
-@curry
 def do_push(client, images):
-    return flat_map(push(client), images)
+    for image in images:
+        for evt in push(client, image):
+            yield evt
 
 
-@curry
 def push(client, image_tag):
     image, tag = image_tag
 

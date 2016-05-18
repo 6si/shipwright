@@ -1,12 +1,12 @@
 from __future__ import absolute_import
 
 import functools
+import operator
 from collections import namedtuple
 
 import zipper
 
 from . import fn
-from .fn import curry
 
 
 def union(inclusions, tree):
@@ -37,7 +37,7 @@ def eval(specifiers, targets):
     exclusions = []
 
     for spec in specifiers:
-        if spec.__name__ == 'exclude':
+        if spec.func == exclude:
             exclusions.append(spec)
         else:
             inclusions.append(spec)
@@ -89,6 +89,13 @@ Root = namedtuple('Root', 'name, children')
 
 # [Container] -> Loc Container
 
+def _find(tree, name):
+    def find_(loc):
+        target = loc.node()
+        return target.name == name
+
+    return tree.find(find_)
+
 
 def make_tree(containers):
     """
@@ -128,13 +135,17 @@ def make_tree(containers):
 
     for c in containers:
 
-        branch_children, root_children = split(is_child(c), tree.children())
+        def is_child(target):
+            if not isinstance(target, Root):
+                return target.parent == c.name
+
+        branch_children, root_children = split(is_child, tree.children())
         t = c._replace(children=tuple(branch_children))
 
         if branch_children:
             tree = tree.edit(replace, tuple(root_children))
 
-        loc = tree.find(fmap(is_target(t.parent)))
+        loc = _find(tree, t.parent)
         if loc:
             tree = loc.insert(t).top()
         else:
@@ -157,7 +168,7 @@ def is_branch(item):
 
 def make_node(node, children):
     # keep children sorted to make testing easier
-    ch = tuple(sorted(children, key=fn.getattr('name')))
+    ch = tuple(sorted(children, key=operator.attrgetter('name')))
     return node._replace(children=ch)
 
 
@@ -189,33 +200,6 @@ def breadth_first_iter(loc):
             child = child.right()
 
 
-@curry
-def is_target(name, target):
-    """
-    >>> from .base import Target
-    >>> from .container import Container
-
-    >>> target = Target(
-    ...     Container('test', None, None, None), None, None, None, None,
-    ... )
-    >>> is_target('test', target)
-    True
-    """
-    return target.name == name
-
-
-@curry
-def is_child(parent, target):
-    if not isinstance(target, Root):
-        return target.parent == parent.name
-
-
-# (a -> b) -> Loc a -> b
-@curry
-def fmap(func, loc):
-    return func(loc.node())
-
-
 # Loc -> [Target]
 def lineage(loc):
     results = []
@@ -227,7 +211,6 @@ def lineage(loc):
 
 
 # (a -> Bool) -> [a] ->[a], [a]
-@curry
 def split(f, children):
     """
     Given a function that returns true or false and a list. Return
@@ -252,7 +235,6 @@ def brood(loc):
 
 
 # Target -> Tree -> [Target]
-@curry
 def upto(target, tree):
     """
     returns target and everything it depends on
@@ -263,13 +245,12 @@ def upto(target, tree):
     ['shipwright_test/1', 'shipwright_test/2']
     """
 
-    loc = tree.find(fmap(is_target(target)))
+    loc = _find(tree, target)
 
     return lineage(loc)  # make_tree(lineage(loc))
 
 
 # Target -> Tree -> [Target]
-@curry
 def dependents(target, tree):
     """
     Returns a target it's dependencies and
@@ -281,12 +262,12 @@ def dependents(target, tree):
     ['shipwright_test/1', 'shipwright_test/2', 'shipwright_test/3']
     """
 
-    loc = tree.find(fmap(is_target(target)))
+    loc = _find(tree, target)
+
     return lineage(loc) + brood(loc)
 
 
 # Target -> Tree -> [Target]
-@curry
 def exact(target, tree):
     """
     Returns only the target.
@@ -298,13 +279,12 @@ def exact(target, tree):
 
     """
 
-    loc = tree.find(fmap(is_target(target)))
+    loc = _find(tree, target)
 
     return [loc.node()]
 
 
 # Target -> Tree -> Tree
-@curry
 def exclude(target, tree):
     """
     Returns everything but the target and it's dependents. If target
@@ -317,7 +297,7 @@ def exclude(target, tree):
 
     """
 
-    loc = tree.find(fmap(is_target(target)))
+    loc = _find(tree, target)
     if loc:
         return loc.remove().top()
     else:

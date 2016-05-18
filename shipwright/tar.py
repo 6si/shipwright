@@ -5,10 +5,9 @@ import os
 import re
 import tarfile
 from os.path import join
+import functools
 
 from docker import utils
-
-from shipwright.fn import curry
 
 
 def bundle_docker_dir(modify_docker_func, docker_path):
@@ -107,7 +106,6 @@ def bundle_docker_dir(modify_docker_func, docker_path):
     return fileobj
 
 
-@curry
 def tag_parent(tag, docker_content):
     r"""
     Replace the From clause  like
@@ -184,4 +182,7 @@ def mkcontext(tag, docker_path):
     within the same git revision (bulid group) as the container being built.
     """
 
-    return bundle_docker_dir(tag_parent(tag), docker_path)
+    return bundle_docker_dir(
+        functools.partial(tag_parent, tag),
+        docker_path,
+    )

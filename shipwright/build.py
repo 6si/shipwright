@@ -2,9 +2,10 @@ from __future__ import absolute_import
 
 import os
 import re
+import functools
 
 from .compat import json_loads
-from .fn import curry, flat_map, merge
+from .fn import merge
 from .tar import mkcontext
 
 # (container->(str -> None))
@@ -31,10 +32,11 @@ def do_build(client, git_rev, targets):
 
     """
 
-    return flat_map(build(client, git_rev), targets)
+    for target in targets:
+        for evt in build(client, git_rev, target):
+            yield evt
 
 
-@curry
 def build(client, git_rev, container):
     """
     builds the given container tagged with <git_rev> and ensures that
@@ -50,7 +52,7 @@ def build(client, git_rev, container):
 
     def process_event_(evt):
         evt_parsed = json_loads(evt)
-        return merge(merge_config)(evt_parsed)
+        return merge(merge_config, evt_parsed)
 
     build_evts = client.build(
         fileobj=mkcontext(git_rev, container.path),

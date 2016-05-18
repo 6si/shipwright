@@ -1,7 +1,5 @@
 from __future__ import absolute_import
 
-from shipwright.fn import curry
-
 
 def key_from_image_name(image_name):
     """
@@ -23,13 +21,11 @@ def key_from_image_info(image_info_dict):
     return [key_from_image_name(t) for t in image_info_dict['RepoTags']]
 
 
-@curry
 def last_built_from_docker(client, name):
     images = client.images(name)
     return list([x for i in images for x in key_from_image_info(i)])
 
 
-@curry
 def tags_from_containers(client, containers):
     return [last_built_from_docker(client, c.name) for c in containers]
 
