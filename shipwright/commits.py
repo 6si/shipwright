@@ -45,20 +45,10 @@ def max_commit(commit_map, commits):
 
 @curry
 def last_commit(repo, path):
-    try:
-        return next(repo.iter_commits(paths=path, max_count=1))
-    except StopIteration:
-        return None
+    for commit in repo.iter_commits(paths=path, max_count=1):
+        return commit
 
 
 @curry
 def last_commit_relative(repo, commit_map, path):
     return relative_commit(commit_map, last_commit(repo, path))
-
-
-@curry
-def last_built(commit_map, commits):
-    if commits:
-        return max(map(commit_map.get, commits)) or -1
-    else:
-        return -1

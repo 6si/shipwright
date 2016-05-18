@@ -118,7 +118,6 @@ class Shipwright(object):
         A stale image is an image that is not the latest of at
         least one branch.
         """
-
         containers = self.containers()
         d = query.dataset(self.source_control, self.docker_client, containers)
 
@@ -189,10 +188,6 @@ def expand(branch, tree):
         ]
         for d in dependencies.brood(tree)
     ]
-
-
-def unit(tree):
-    return tree, iter(())
 
 
 # (Tree -> [Target]) -> (Tree -> [Target]) -> [Target]

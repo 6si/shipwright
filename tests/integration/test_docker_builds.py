@@ -35,6 +35,10 @@ def create_repo(path, source):
     repo.index.commit('Initial Commit')
     return repo
 
+def commit_untracked(repo, message='WIP'):
+    repo.index.add(repo.untracked_files)
+    repo.index.commit(message)
+
 
 def test_sample(tmpdir):
     path = str(tmpdir.join('shipwright-sample'))
@@ -112,6 +116,226 @@ def test_multi_dockerfile(tmpdir):
         old_images = (
             cli.images(name='shipwright/service1-dev', quiet=True) +
             cli.images(name='shipwright/service1', quiet=True) +
+            cli.images(name='shipwright/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+
+def test_clean_tree_avoids_rebuild(tmpdir):
+    tmp = tmpdir.join('shipwright-sample')
+    path = str(tmp)
+    source = pkg_resources.resource_filename(
+        __name__,
+        'examples/shipwright-sample',
+    )
+    repo = create_repo(path, source)
+
+    client_cfg = docker_utils.kwargs_from_env()
+
+    cli = docker.Client(version='1.18', **client_cfg)
+
+    try:
+        shipw_cli.run(
+            repo=repo,
+            client_cfg=client_cfg,
+            arguments=get_defaults(),
+            environ={},
+        )
+
+        tmp.join('service1/base.txt').write('Hi mum')
+        commit_untracked(repo)
+
+        shipw_cli.run(
+            repo=repo,
+            client_cfg=client_cfg,
+            arguments=get_defaults(),
+            environ={},
+        )
+
+        assert len(cli.images(name='shipwright/service1')) == 2
+        assert len(cli.images(name='shipwright/shared')) == 1
+        assert len(cli.images(name='shipwright/base')) == 1
+    finally:
+        old_images = (
+            cli.images(name='shipwright/service1', quiet=True) +
+            cli.images(name='shipwright/shared', quiet=True) +
+            cli.images(name='shipwright/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+
+def test_purge_removes_stale_images(tmpdir):
+    tmp = tmpdir.join('shipwright-sample')
+    path = str(tmp)
+    source = pkg_resources.resource_filename(
+        __name__,
+        'examples/shipwright-sample',
+    )
+    repo = create_repo(path, source)
+
+    client_cfg = docker_utils.kwargs_from_env()
+
+    cli = docker.Client(version='1.18', **client_cfg)
+
+    try:
+        shipw_cli.run(
+            repo=repo,
+            client_cfg=client_cfg,
+            arguments=get_defaults(),
+            environ={},
+        )
+
+        tmp.join('service1/base.txt').write('Hi mum')
+        commit_untracked(repo)
+
+        shipw_cli.run(
+            repo=repo,
+            client_cfg=client_cfg,
+            arguments=get_defaults(),
+            environ={},
+        )
+
+        assert len(cli.images(name='shipwright/service1')) == 2
+        assert len(cli.images(name='shipwright/shared')) == 1
+        assert len(cli.images(name='shipwright/base')) == 1
+
+        args = get_defaults()
+        args['purge'] = True
+
+        shipw_cli.run(
+            repo=repo,
+            client_cfg=client_cfg,
+            arguments=args,
+            environ={},
+        )
+
+        assert len(cli.images(name='shipwright/service1')) == 1
+        assert len(cli.images(name='shipwright/shared')) == 1
+        assert len(cli.images(name='shipwright/base')) == 1
+
+
+    finally:
+        old_images = (
+            cli.images(name='shipwright/service1', quiet=True) +
+            cli.images(name='shipwright/shared', quiet=True) +
+            cli.images(name='shipwright/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+
+def test_dump_file(tmpdir):
+    dump_file = tmpdir.join('dump.txt')
+    tmp = tmpdir.join('shipwright-sample')
+    path = str(tmp)
+    source = pkg_resources.resource_filename(
+        __name__,
+        'examples/shipwright-sample',
+    )
+    repo = create_repo(path, source)
+
+    client_cfg = docker_utils.kwargs_from_env()
+
+    cli = docker.Client(version='1.18', **client_cfg)
+
+    try:
+        args = get_defaults()
+        args['--dump-file'] = str(dump_file)
+        shipw_cli.run(
+            repo=repo,
+            client_cfg=client_cfg,
+            arguments=args,
+            environ={},
+        )
+
+        assert ' : FROM busybox' in dump_file.read()
+    finally:
+        old_images = (
+            cli.images(name='shipwright/service1', quiet=True) +
+            cli.images(name='shipwright/shared', quiet=True) +
+            cli.images(name='shipwright/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+
+def test_exclude(tmpdir):
+    path = str(tmpdir.join('shipwright-sample'))
+    source = pkg_resources.resource_filename(
+        __name__,
+        'examples/shipwright-sample',
+    )
+    repo = create_repo(path, source)
+    client_cfg = docker_utils.kwargs_from_env()
+
+    cli = docker.Client(version='1.18', **client_cfg)
+
+    args = get_defaults()
+    args['--exclude'] = [
+        'shipwright/service1',
+        'shipwright/shared',
+    ]
+
+    try:
+        shipw_cli.run(
+            repo=repo,
+            client_cfg=client_cfg,
+            arguments=args,
+            environ={},
+        )
+
+        base,  = (
+            cli.images(name='shipwright/service1') +
+            cli.images(name='shipwright/shared') +
+            cli.images(name='shipwright/base')
+        )
+
+        assert 'shipwright/base:master' in base['RepoTags']
+        assert 'shipwright/base:latest' in base['RepoTags']
+    finally:
+        old_images = (
+            cli.images(name='shipwright/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+
+def test_exact(tmpdir):
+    path = str(tmpdir.join('shipwright-sample'))
+    source = pkg_resources.resource_filename(
+        __name__,
+        'examples/shipwright-sample',
+    )
+    repo = create_repo(path, source)
+    client_cfg = docker_utils.kwargs_from_env()
+
+    cli = docker.Client(version='1.18', **client_cfg)
+
+    args = get_defaults()
+    args['--exact'] = [
+        'shipwright/base',
+    ]
+
+    try:
+        shipw_cli.run(
+            repo=repo,
+            client_cfg=client_cfg,
+            arguments=args,
+            environ={},
+        )
+
+        base,  = (
+            cli.images(name='shipwright/service1') +
+            cli.images(name='shipwright/shared') +
+            cli.images(name='shipwright/base')
+        )
+
+        assert 'shipwright/base:master' in base['RepoTags']
+        assert 'shipwright/base:latest' in base['RepoTags']
+    finally:
+        old_images = (
             cli.images(name='shipwright/base', quiet=True)
         )
         for image in old_images:

@@ -37,7 +37,7 @@ def eval(specifiers, targets):
     exclusions = []
 
     for spec in specifiers:
-        if spec.func_name == 'exclude':
+        if spec.__name__ == 'exclude':
             exclusions.append(spec)
         else:
             inclusions.append(spec)
@@ -75,7 +75,7 @@ def needs_building(tree):
                         needs.append(target)
                 loc = gen.send(True)  # don't check this locations children
             else:
-                if target.last_built_rel:
+                if target.last_built_ref:
                     skip.append(target)
 
                 loc = next(gen)

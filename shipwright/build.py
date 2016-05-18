@@ -7,9 +7,6 @@ from .compat import json_loads
 from .fn import curry, flat_map, merge
 from .tar import mkcontext
 
-RE_SUCCESS = re.compile(r'^Successfully built ([a-f0-9]+)\s*$')
-
-
 # (container->(str -> None))
 #   -> (container -> stream)
 #   -> [targets]
@@ -65,28 +62,3 @@ def build(client, git_rev, container):
     )
 
     return (process_event_(evt) for evt in build_evts)
-
-
-def success(line):
-    """
-    >>> success('Blah')
-    >>> success('Successfully built 1234\\n')
-    '1234'
-    """
-    match = RE_SUCCESS.search(line)
-    if match:
-        return match.group(1)
-    return None
-
-
-def success_from_stream(stream):
-    """
-    >>> stream = iter(('Blah', 'Successfully built 1234\\n'))
-    >>> success_from_stream(stream)
-    '1234'
-    """
-    for x in stream:
-        result = success(x)
-        if result:
-            return result
-    return None

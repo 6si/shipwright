@@ -23,6 +23,8 @@ Options:
 
  --x-assert-hostname  Disable strict hostchecking, useful for boot2docker.
 
+ --account=DOCKER_HUB_ACCOUNT Override SW_NAMESPACE if it's set in the environment.
+
 
 
 
@@ -122,7 +124,7 @@ def main():
     )
 
 
-def run(repo, arguments, client_cfg, environ):
+def process_arguments(repo, arguments, client_cfg, environ):
     try:
         config = json.load(open(
             os.path.join(repo.working_dir, '.shipwright.json'),
@@ -130,11 +132,10 @@ def run(repo, arguments, client_cfg, environ):
     except OSError:
         config = {
             'namespace': (
-                arguments['DOCKER_HUB_ACCOUNT'] or
+                arguments['--account'] or
                 environ.get('SW_NAMESPACE')
             ),
         }
-
     if config['namespace'] is None:
         exit(
             'Please specify your docker hub account in\n'
@@ -142,24 +143,18 @@ def run(repo, arguments, client_cfg, environ):
             'the command line or set SW_NAMESPACE.\n'
             'Run shipwright --help for more information.',
         )
-
     assert_hostname = config.get('assert_hostname')
-
     if arguments['--x-assert-hostname']:
         assert_hostname = not arguments['--x-assert-hostname']
-
     fn.maybe(
         fn.setattr('assert_hostname', assert_hostname),
         client_cfg.get('tls'),
     )
-
     client = docker.Client(version='1.18', **client_cfg)
     commands = ['build', 'push', 'purge']
     # {'publish': false, 'purge': true, ...} = 'purge'
     command_names = [c for c in commands if arguments[c]]
     command_name = command_names[0] if command_names else 'build'
-
-    command = getattr(Shipwright(config, repo, client), command_name)
 
     args = [chain(
         map(exact, arguments.pop('--exact')),
@@ -168,13 +163,20 @@ def run(repo, arguments, client_cfg, environ):
         map(upto, arguments.pop('--upto')),
         map(upto, arguments.pop('TARGET')),
     )]
-
     if command_name == 'push':
         args.append(not arguments.pop('--no-build'))
-
     dump_file = None
     if arguments['--dump-file']:
         dump_file = open(arguments['--dump-file'], 'w')
+
+    return args, command_name, dump_file, config, client
+
+
+def run(repo, arguments, client_cfg, environ):
+    args, command_name, dump_file, config, client = process_arguments(
+        repo, arguments, client_cfg, environ,
+    )
+    command = getattr(Shipwright(config, repo, client), command_name)
 
     for event in command(*args):
         show_fn = mk_show(event)
