@@ -44,6 +44,6 @@ def test_error():
     assert switch({
         'error': None,
         'errorDetail': {
-            'message': 'I AM ERROR'
-        }
+            'message': 'I AM ERROR',
+        },
     }) == '[ERROR] I AM ERROR\n'

@@ -35,6 +35,7 @@ def create_repo(path, source):
     repo.index.commit('Initial Commit')
     return repo
 
+
 def commit_untracked(repo, message='WIP'):
     repo.index.add(repo.untracked_files)
     repo.index.commit(message)
@@ -214,7 +215,6 @@ def test_purge_removes_stale_images(tmpdir):
         assert len(cli.images(name='shipwright/service1')) == 1
         assert len(cli.images(name='shipwright/shared')) == 1
         assert len(cli.images(name='shipwright/base')) == 1
-
 
     finally:
         old_images = (

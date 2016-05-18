@@ -1,11 +1,11 @@
 from __future__ import absolute_import
 
+import functools
 import io
 import os
 import re
 import tarfile
 from os.path import join
-import functools
 
 from docker import utils
 

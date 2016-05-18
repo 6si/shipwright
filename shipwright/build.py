@@ -1,17 +1,12 @@
 from __future__ import absolute_import
 
 import os
-import re
-import functools
 
 from .compat import json_loads
 from .fn import merge
 from .tar import mkcontext
 
-# (container->(str -> None))
-#   -> (container -> stream)
-#   -> [targets]
-#   -> [(container, docker_image_id)]
+
 def do_build(client, git_rev, targets):
     """
     Generic function for building multiple containers while

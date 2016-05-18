@@ -87,7 +87,6 @@ def needs_building(tree):
 
 Root = namedtuple('Root', 'name, children')
 
-# [Container] -> Loc Container
 
 def _find(tree, name):
     def find_(loc):

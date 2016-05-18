@@ -23,7 +23,8 @@ Options:
 
  --x-assert-hostname  Disable strict hostchecking, useful for boot2docker.
 
- --account=DOCKER_HUB_ACCOUNT Override SW_NAMESPACE if it's set in the environment.
+ --account=DOCKER_HUB_ACCOUNT Override SW_NAMESPACE if it's set in the
+                      environment.
 
 
 
@@ -95,19 +96,17 @@ Examples:
 """
 from __future__ import absolute_import, print_function
 
+import functools
 import json
 import os
 import sys
 from itertools import chain, cycle
-import functools
-import operator
 
 import docker
 import git
 from docker.utils import kwargs_from_env
 from docopt import docopt
 
-from shipwright import fn
 from shipwright.base import Shipwright
 from shipwright.colors import rainbow
 from shipwright.dependencies import dependents, exact, exclude, upto

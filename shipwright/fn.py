@@ -6,10 +6,7 @@
 
 from __future__ import absolute_import, print_function
 
-import inspect
 from functools import reduce as ft_reduce
-from functools import partial, wraps
-from itertools import chain
 
 
 def compose(*fns):
