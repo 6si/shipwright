@@ -82,66 +82,6 @@ def juxt(*fns):
     return _
 
 
-@curry
-def catch(fn, on_error, value):
-    """
-    Given a function and an error handler  returns a function
-    that invokes the function with the given value. Returns
-    the results of the invoked function if there were no errors
-    otherwise returns the results of invoking the error handler.
-    """
-
-    try:
-        return fn(value)
-    except Exception as e:
-        return on_error(e, value)
-
-
-@curry
-def not_(fn, a):
-    return not fn(a)
-
-
-# binary comparisons
-@curry
-def eq(a, b):
-    return a == b
-
-
-@curry
-def ne(a, b):
-    return a != b
-
-
-@curry
-def lt(a, b):
-    return a < b
-
-
-@curry
-def lte(a, b):
-    return a <= b
-
-
-@curry
-def gt(a, b):
-    return a > b
-
-
-@curry
-def gte(a, b):
-    return a >= b
-
-
-@curry
-def contains(a, b):
-    return b in a
-
-
-@curry
-def is_(a, b):
-    return a is b
-
 # logic functions
 
 
@@ -157,57 +97,6 @@ def maybe(fn, value):
         return fn(value)
 
 
-def when(*tests):
-    def when_(value):
-        for test, fn in tests:
-            if test(value):
-                return fn(value)
-        raise RuntimeError('Nothing matched {}'.format(value))
-    return when_
-
-
-# string funcs
-@curry
-def rsplit(sep, num, s):
-    return s.rsplit(sep, num)
-
-
-@curry
-def split(sep, s):
-    return s.split(sep)
-
-
-@curry
-def strip(chars, s):
-    return s.strip(chars)
-
-
-@curry
-def endswith(s1, s2):
-    """
-    Returns true if s2 ends with s1
-    """
-
-    return s2.endswith(s1)
-
-
-@curry
-def startswith(s1, s2):
-    """
-    Returns true if s2 starts with s1
-    """
-    return s2.startswith(s1)
-
-
-# sequence funcs
-flatten = chain.from_iterable
-
-
-@curry
-def map(fn, sequence):
-    return list(__builtin__.map(fn, sequence))
-
-
 @curry
 def fmap(fn, sequence):
     return itertools_imap(fn, sequence)
@@ -216,13 +105,7 @@ def fmap(fn, sequence):
 # (a -> [b]) -> [a] -> [b]
 @curry
 def flat_map(f, arr):
-    return flatten(fmap(f, arr))
-
-
-# Dict functions
-@curry
-def getitem(key, hashmap):
-    return hashmap[key]
+    return chain.from_iterable(fmap(f, arr))
 
 
 @curry
