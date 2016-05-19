@@ -2,7 +2,6 @@ from __future__ import absolute_import, print_function
 
 import io
 import os
-import re
 
 from setuptools import find_packages, setup
 
@@ -15,19 +14,13 @@ def read(*names, **kwargs):
         return fp.read()
 
 
-def find_version(*file_paths):
-    version_file = read(*file_paths)
-    version_match = re.search(r"^version = ['\"]([^'\"]*)['\"]",
-                              version_file, re.M)
-    if version_match:
-        return version_match.group(1)
-    raise RuntimeError('Unable to find version string.')
+readme = open('README.rst').read()
+history = open('CHANGES.rst').read().replace('.. :changelog:', '')
 
-long_description = read('README.rst')
 
 setup(
     name='dockhand',
-    version=find_version('shipwright/version.py'),
+    version='0.1.1.dev0',
     url='https://github.com/graingert/dockhand/',
     license='Apache Software License',
     author='Scott Robertson',
@@ -43,7 +36,7 @@ setup(
     description=(
         'The right way to build, tag and ship shared Docker containers.'
     ),
-    long_description=long_description,
+    long_description=readme + '\n\n' + history,
     packages=find_packages(),
     include_package_data=True,
     platforms='any',
