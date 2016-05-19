@@ -104,16 +104,17 @@ from itertools import chain, cycle
 
 import docker
 import git
+import pkg_resources
 from docker.utils import kwargs_from_env
 from docopt import docopt
 
 from shipwright.base import Shipwright
 from shipwright.colors import rainbow
 from shipwright.dependencies import dependents, exact, exclude, upto
-from shipwright.version import version
 
 
 def main():
+    version = pkg_resources.get_distribution('dockhand').version
     arguments = docopt(
         __doc__, options_first=False, version='Shipwright ' + version,
     )
