@@ -1,11 +1,11 @@
 from __future__ import absolute_import
 
+import functools
 from collections import namedtuple
 
-from . import build, commits, dependencies, docker, purge, push, query
+from . import build, commits, dependencies, docker, push
 from .container import containers as list_containers
 from .container import container_name
-from .fn import curry
 
 
 class Shipwright(object):
@@ -16,12 +16,14 @@ class Shipwright(object):
         self.config = config
 
     def containers(self):
+        cn = functools.partial(
+            container_name,
+            self.namespace,
+            self.config.get('names', {}),
+            self.source_control.working_dir,
+        )
         return list_containers(
-            container_name(
-                self.namespace,
-                self.config.get('names', {}),
-                self.source_control.working_dir,
-            ),
+            cn,
             self.source_control.working_dir,
         )
 
@@ -32,8 +34,13 @@ class Shipwright(object):
 
         commit_map = commits.mkmap(self.source_control)
 
+        max_commit = functools.partial(
+            commits.max_commit,
+            commit_map,
+        )
+
         last_built_ref, last_built_rel = zip(*map(
-            commits.max_commit(commit_map),
+            max_commit,
             docker.tags_from_containers(client, containers),  # list of tags
         ))
 
@@ -111,27 +118,6 @@ class Shipwright(object):
 
         raise StopIteration(all_images)
 
-    def purge(self, specifiers):
-        """
-        Removes all stale images.
-
-        A stale image is an image that is not the latest of at
-        least one branch.
-        """
-
-        containers = self.containers()
-        d = query.dataset(self.source_control, self.docker_client, containers)
-
-        stale_images = d.query('''
-      select image.image, tag
-      from
-        image
-        left join latest_commit on latest_commit.commit = image.tag
-      where latest_commit.commit is null
-    ''')
-
-        return purge.do_purge(self.docker_client, stale_images)
-
     def push(self, specifiers, build=True):
         """
         Pushes the latest images for the current branch to the repository.
@@ -151,22 +137,7 @@ class Shipwright(object):
         else:
             return push_tree(tree)
 
-    def z_push(self, tree):
-        containers = dependencies.brood(tree)
 
-        branch = self.source_control.active_branch.name
-        d = query.dataset(self.source_control, self.docker_client, containers)
-
-        images = d.query("""
-      select image, commit
-      from latest_commit
-      where
-        branch = ?0 and image is not null
-    """).execute(branch)
-        return push.do_push(self.docker_client, images)
-
-
-@curry
 def expand(branch, tree):
     """
     Flattens the tree to the list and triples each entry.
@@ -191,12 +162,7 @@ def expand(branch, tree):
     ]
 
 
-def unit(tree):
-    return tree, iter(())
-
-
 # (Tree -> [Target]) -> (Tree -> [Target]) -> [Target]
-@curry
 def bind(a, b, tree):
     """
     Glues two Shipwright commands (functions) together.

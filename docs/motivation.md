@@ -17,7 +17,7 @@ And the directory structure would look something like
 
 	$ find .
     ./shared/python/Dockerfile
-    ./shared/python/requirements.txt
+    ./shared/python/setup.py
     ...
     ./shared/libs/Dockerfile
     ./shared/libs/src

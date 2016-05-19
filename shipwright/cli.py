@@ -4,7 +4,7 @@ Shipwright -- Builds shared Docker images within a common git repository.
 
 
 Usage:
-  shipwright [options] [build|push [--no-build]|purge]
+  shipwright [options] [build|push [--no-build]]
              [TARGET]...
              [-d TARGET]...
              [-e TARGET]...
@@ -22,6 +22,9 @@ Options:
  -H DOCKER_HOST       Override DOCKER_HOST if it's set in the environment.
 
  --x-assert-hostname  Disable strict hostchecking, useful for boot2docker.
+
+ --account=DOCKER_HUB_ACCOUNT Override SW_NAMESPACE if it's set in the
+                      environment.
 
 
 
@@ -93,6 +96,7 @@ Examples:
 """
 from __future__ import absolute_import, print_function
 
+import functools
 import json
 import os
 import sys
@@ -103,7 +107,6 @@ import git
 from docker.utils import kwargs_from_env
 from docopt import docopt
 
-from shipwright import fn
 from shipwright.base import Shipwright
 from shipwright.colors import rainbow
 from shipwright.dependencies import dependents, exact, exclude, upto
@@ -122,19 +125,18 @@ def main():
     )
 
 
-def run(repo, arguments, client_cfg, environ):
+def process_arguments(repo, arguments, client_cfg, environ):
     try:
         config = json.load(open(
             os.path.join(repo.working_dir, '.shipwright.json'),
         ))
-    except OSError:
+    except IOError:
         config = {
             'namespace': (
-                arguments['DOCKER_HUB_ACCOUNT'] or
+                arguments['--account'] or
                 environ.get('SW_NAMESPACE')
             ),
         }
-
     if config['namespace'] is None:
         exit(
             'Please specify your docker hub account in\n'
@@ -142,39 +144,41 @@ def run(repo, arguments, client_cfg, environ):
             'the command line or set SW_NAMESPACE.\n'
             'Run shipwright --help for more information.',
         )
-
     assert_hostname = config.get('assert_hostname')
-
     if arguments['--x-assert-hostname']:
         assert_hostname = not arguments['--x-assert-hostname']
 
-    fn.maybe(
-        fn.setattr('assert_hostname', assert_hostname),
-        client_cfg.get('tls'),
-    )
+    tls_config = client_cfg.get('tls')
+    if tls_config is not None:
+        tls_config.assert_hostname = assert_hostname
 
     client = docker.Client(version='1.18', **client_cfg)
-    commands = ['build', 'push', 'purge']
-    # {'publish': false, 'purge': true, ...} = 'purge'
+    commands = ['build', 'push']
     command_names = [c for c in commands if arguments[c]]
     command_name = command_names[0] if command_names else 'build'
-
-    command = getattr(Shipwright(config, repo, client), command_name)
+    pt = functools.partial
 
     args = [chain(
-        map(exact, arguments.pop('--exact')),
-        map(dependents, arguments.pop('--dependents')),
-        map(exclude, arguments.pop('--exclude')),
-        map(upto, arguments.pop('--upto')),
-        map(upto, arguments.pop('TARGET')),
+        [pt(exact, target) for target in arguments.pop('--exact')],
+        [pt(dependents, target) for target in arguments.pop('--dependents')],
+        [pt(exclude, target) for target in arguments.pop('--exclude')],
+        [pt(upto, target) for target in arguments.pop('--upto')],
+        [pt(upto, target) for target in arguments.pop('TARGET')],
     )]
-
     if command_name == 'push':
         args.append(not arguments.pop('--no-build'))
-
     dump_file = None
     if arguments['--dump-file']:
         dump_file = open(arguments['--dump-file'], 'w')
+
+    return args, command_name, dump_file, config, client
+
+
+def run(repo, arguments, client_cfg, environ):
+    args, command_name, dump_file, config, client = process_arguments(
+        repo, arguments, client_cfg, environ,
+    )
+    command = getattr(Shipwright(config, repo, client), command_name)
 
     for event in command(*args):
         show_fn = mk_show(event)
@@ -205,10 +209,15 @@ def memo(f, arg, memos={}):
 
 def mk_show(evt):
     if evt['event'] in ('build_msg', 'push') or 'error' in evt:
+        name = None
+        container = evt.get('container')
+        if container is not None:
+            name = container.name
+        else:
+            name = evt.get('image')
         return memo(
             highlight,
-            fn.maybe(fn.getattr('name'),
-                     evt.get('container')) or evt.get('image'),
+            name,
         )
     else:
         return print

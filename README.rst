@@ -151,16 +151,3 @@ so.
 
     $ shipwright build
     $ shipwright push -e <namespace>/public_image
-
-Purging
-=======
-
-After using Shipwright for a bit, images tend to build up that you no
-longer use. Shipwright has a experimental command ``purge`` that will
-remove all stale images. A stale image is an image that is not the
-latest of at least one branch. Images tagged with branch names that are
-no longer in git will also be removed.
-
-::
-
-    $ shipwright purge

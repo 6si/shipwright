@@ -3,12 +3,9 @@ from __future__ import absolute_import
 import os
 from collections import namedtuple
 
-from .fn import curry
-
 Container = namedtuple('Container', 'name,dir_path,path,parent')
 
 
-@curry
 def container_name(namespace, name_map, root_path, path):
     """
     Determines the name of the container from the config file
