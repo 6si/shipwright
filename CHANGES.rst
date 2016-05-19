@@ -1,4 +1,4 @@
-0.1.1 (unreleased)
+0.2.0 (2016-05-19)
 ------------------
 
 - Removed @curry decorator.
