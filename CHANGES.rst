@@ -1,7 +1,7 @@
 0.2.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Support .dockerignore files on Py3k
 
 
 0.2.0 (2016-05-19)

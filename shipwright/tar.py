@@ -71,13 +71,12 @@ def bundle_docker_dir(modify_docker_func, docker_path):
     """
 
     # tar up the directory minus the Dockerfile,
-    # TODO: respect .dockerignore
 
     path = os.path.dirname(docker_path)
     try:
-        ignore = filter(None, [
-            p.strip() for p in open(join(path, '.dockerignore')).readlines()
-        ])
+        with open(join(path, '.dockerignore')) as f:
+            stripped = (p.strip() for p in f.readlines())
+            ignore = [x for x in stripped if x]
     except IOError:
         ignore = []
 
