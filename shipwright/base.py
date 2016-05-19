@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import functools
 from collections import namedtuple
 
-from . import build, commits, dependencies, docker, purge, push, query
+from . import build, commits, dependencies, docker, push
 from .container import containers as list_containers
 from .container import container_name
 
@@ -117,26 +117,6 @@ class Shipwright(object):
             yield evt
 
         raise StopIteration(all_images)
-
-    def purge(self, specifiers):
-        """
-        Removes all stale images.
-
-        A stale image is an image that is not the latest of at
-        least one branch.
-        """
-        containers = self.containers()
-        d = query.dataset(self.source_control, self.docker_client, containers)
-
-        stale_images = d.query('''
-      select image.image, tag
-      from
-        image
-        left join latest_commit on latest_commit.commit = image.tag
-      where latest_commit.commit is null
-    ''')
-
-        return purge.do_purge(self.docker_client, stale_images)
 
     def push(self, specifiers, build=True):
         """

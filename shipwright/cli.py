@@ -4,7 +4,7 @@ Shipwright -- Builds shared Docker images within a common git repository.
 
 
 Usage:
-  shipwright [options] [build|push [--no-build]|purge]
+  shipwright [options] [build|push [--no-build]]
              [TARGET]...
              [-d TARGET]...
              [-e TARGET]...
@@ -153,8 +153,7 @@ def process_arguments(repo, arguments, client_cfg, environ):
         tls_config.assert_hostname = assert_hostname
 
     client = docker.Client(version='1.18', **client_cfg)
-    commands = ['build', 'push', 'purge']
-    # {'publish': false, 'purge': true, ...} = 'purge'
+    commands = ['build', 'push']
     command_names = [c for c in commands if arguments[c]]
     command_name = command_names[0] if command_names else 'build'
     pt = functools.partial

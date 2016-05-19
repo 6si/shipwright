@@ -1,5 +1,0 @@
-docker-py>=1.6.0
-requests>=2.4.3
-GitPython==0.3.2.RC1
-zipper
-splicer>=0.2.0

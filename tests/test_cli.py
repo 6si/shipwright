@@ -21,7 +21,6 @@ def get_defaults():
         '-H': None,
         'TARGET': [],
         'build': False,
-        'purge': False,
         'push': False,
     }
 
