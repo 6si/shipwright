@@ -48,8 +48,9 @@ def test_sample(tmpdir):
         'examples/shipwright-sample',
     )
     repo = create_repo(path, source)
-    client_cfg = docker_utils.kwargs_from_env()
+    tag = repo.head.ref.commit.hexsha[:12]
 
+    client_cfg = docker_utils.kwargs_from_env()
     cli = docker.Client(version='1.18', **client_cfg)
 
     try:
@@ -68,10 +69,13 @@ def test_sample(tmpdir):
 
         assert 'shipwright/service1:master' in service1['RepoTags']
         assert 'shipwright/service1:latest' in service1['RepoTags']
+        assert 'shipwright/service1:' + tag in service1['RepoTags']
         assert 'shipwright/shared:master' in shared['RepoTags']
         assert 'shipwright/shared:latest' in shared['RepoTags']
+        assert 'shipwright/shared:' + tag in shared['RepoTags']
         assert 'shipwright/base:master' in base['RepoTags']
         assert 'shipwright/base:latest' in base['RepoTags']
+        assert 'shipwright/base:' + tag in base['RepoTags']
     finally:
         old_images = (
             cli.images(name='shipwright/service1', quiet=True) +
@@ -89,8 +93,9 @@ def test_multi_dockerfile(tmpdir):
         'examples/multi-dockerfile',
     )
     repo = create_repo(path, source)
-    client_cfg = docker_utils.kwargs_from_env()
+    tag = repo.head.ref.commit.hexsha[:12]
 
+    client_cfg = docker_utils.kwargs_from_env()
     cli = docker.Client(version='1.18', **client_cfg)
 
     try:
@@ -109,10 +114,13 @@ def test_multi_dockerfile(tmpdir):
 
         assert 'shipwright/service1-dev:master' in service1_dev['RepoTags']
         assert 'shipwright/service1-dev:latest' in service1_dev['RepoTags']
+        assert 'shipwright/service1-dev:' + tag in service1_dev['RepoTags']
         assert 'shipwright/service1:master' in service1['RepoTags']
         assert 'shipwright/service1:latest' in service1['RepoTags']
+        assert 'shipwright/service1:' + tag in service1['RepoTags']
         assert 'shipwright/base:master' in base['RepoTags']
         assert 'shipwright/base:latest' in base['RepoTags']
+        assert 'shipwright/base:' + tag in base['RepoTags']
     finally:
         old_images = (
             cli.images(name='shipwright/service1-dev', quiet=True) +
@@ -131,9 +139,9 @@ def test_clean_tree_avoids_rebuild(tmpdir):
         'examples/shipwright-sample',
     )
     repo = create_repo(path, source)
+    old_tag = repo.head.ref.commit.hexsha[:12]
 
     client_cfg = docker_utils.kwargs_from_env()
-
     cli = docker.Client(version='1.18', **client_cfg)
 
     try:
@@ -146,6 +154,7 @@ def test_clean_tree_avoids_rebuild(tmpdir):
 
         tmp.join('service1/base.txt').write('Hi mum')
         commit_untracked(repo)
+        new_tag = repo.head.ref.commit.hexsha[:12]
 
         shipw_cli.run(
             repo=repo,
@@ -154,9 +163,34 @@ def test_clean_tree_avoids_rebuild(tmpdir):
             environ={},
         )
 
-        assert len(cli.images(name='shipwright/service1')) == 2
-        assert len(cli.images(name='shipwright/shared')) == 1
-        assert len(cli.images(name='shipwright/base')) == 1
+        service1a, service1b, shared, base = (
+            cli.images(name='shipwright/service1') +
+            cli.images(name='shipwright/shared') +
+            cli.images(name='shipwright/base')
+        )
+
+        service1a, service1b = sorted(
+            (service1a, service1b),
+            key=lambda x: len(x['RepoTags']),
+            reverse=True,
+        )
+
+        assert 'shipwright/service1:master' in service1a['RepoTags']
+        assert 'shipwright/service1:latest' in service1a['RepoTags']
+        assert 'shipwright/service1:' + new_tag in service1a['RepoTags']
+
+        assert 'shipwright/service1:' + old_tag in service1b['RepoTags']
+
+        assert 'shipwright/shared:master' in shared['RepoTags']
+        assert 'shipwright/shared:latest' in shared['RepoTags']
+        assert 'shipwright/shared:' + old_tag in shared['RepoTags']
+        assert 'shipwright/shared:' + new_tag in shared['RepoTags']
+
+        assert 'shipwright/base:master' in base['RepoTags']
+        assert 'shipwright/base:latest' in base['RepoTags']
+        assert 'shipwright/base:' + old_tag in base['RepoTags']
+        assert 'shipwright/base:' + new_tag in base['RepoTags']
+
     finally:
         old_images = (
             cli.images(name='shipwright/service1', quiet=True) +
@@ -175,9 +209,9 @@ def test_purge_removes_stale_images(tmpdir):
         'examples/shipwright-sample',
     )
     repo = create_repo(path, source)
+    tag = repo.head.ref.commit.hexsha[:12]
 
     client_cfg = docker_utils.kwargs_from_env()
-
     cli = docker.Client(version='1.18', **client_cfg)
 
     try:
