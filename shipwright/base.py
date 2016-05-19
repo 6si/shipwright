@@ -157,20 +157,6 @@ class Shipwright(object):
         else:
             return push_tree(tree)
 
-    def z_push(self, tree):
-        containers = dependencies.brood(tree)
-
-        branch = self.source_control.active_branch.name
-        d = query.dataset(self.source_control, self.docker_client, containers)
-
-        images = d.query("""
-      select image, commit
-      from latest_commit
-      where
-        branch = ?0 and image is not null
-    """).execute(branch)
-        return push.do_push(self.docker_client, images)
-
 
 def expand(branch, tree):
     """
