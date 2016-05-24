@@ -47,7 +47,7 @@ $ shipwright solomon
 
 **NOTE: you can use any username you'd like while building locally. Nothing is published unless you include the `--publish` flag. However  it's probably a good idea to substitue `solomon` in the above example with you (or your organizations) official docker hub username.**
 
-**PRO TIP: if you build allot and  set the `SW_NAMESPACE` environment variable to your username**
+**PRO TIP: if you build a lot, set the `SW_NAMESPACE` environment variable to your username**
 
 Running `shipwright` a second time nothing will return immediatly without doing anything as Shipwright is smart enough to know nothing has changed.
 
