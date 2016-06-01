@@ -29,36 +29,20 @@ class Shipwright(object):
 
     def targets(self):
         client = self.docker_client
+        repo = self.source_control
 
         containers = self.containers()
-
-        commit_map = commits.mkmap(self.source_control)
-
-        max_commit = functools.partial(
-            commits.max_commit,
-            commit_map,
-        )
-
-        last_built_ref, last_built_rel = zip(*map(
-            max_commit,
-            docker.tags_from_containers(client, containers),  # list of tags
-        ))
-
-        current_rel = [
-            commits.last_commit_relative(
-                self.source_control,
-                commit_map,
-                c.dir_path,
-            )
-            for c in containers
-        ]
+        docker_tags = docker.tags_from_containers(client, containers)
+        paths = [c.dir_path for c in containers]
+        cci = commits.container_commit_info(repo, docker_tags, paths)
+        last_built_ref, last_built_rel, current_rels = cci
 
         # [[Container], [Tag], [Int], [Int]] -> [Target]
         return [
             Target(container, built_ref, built_rel, current_rel, None)
 
             for container, built_ref, built_rel, current_rel in zip(
-                containers, last_built_ref, last_built_rel, current_rel,
+                containers, last_built_ref, last_built_rel, current_rels,
             )
 
             if current_rel is not None
