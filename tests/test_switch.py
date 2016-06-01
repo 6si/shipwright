@@ -1,6 +1,10 @@
 from __future__ import absolute_import
 
-from shipwright.cli import switch
+from shipwright import cli
+
+
+def switch(event):
+    return cli.switch(event, True)
 
 aux = {
     u'aux': {
@@ -33,11 +37,22 @@ def test_status():
     }) == '[STATUS] eg: Not Downloading xyz'
 
 
-def test_status_downloading():
-    assert switch({
+def test_progress():
+    evt = {
         'status': 'Downloading xyz',
         'id': 'eg',
-    }) == '[STATUS] eg: Downloading xyz\r'
+        'progressDetail': {'current': 10, 'total': 100},
+    }
+    assert cli.switch(evt, True) == '[STATUS] eg: Downloading xyz 10/100\r'
+
+
+def test_hide_progress():
+    evt = {
+        'status': 'Downloading xyz',
+        'id': 'eg',
+        'progressDetail': {'current': 10, 'total': 100},
+    }
+    assert cli.switch(evt, False) is None
 
 
 def test_error():

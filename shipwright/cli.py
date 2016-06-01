@@ -181,18 +181,16 @@ def run(repo, arguments, client_cfg, environ):
     )
     command = getattr(Shipwright(config, repo, client), command_name)
 
+    show_progress = sys.stdout.isatty()
+
     for event in command(*args):
-        show_fn = mk_show(event)
-        formatted_message = streamout(event, dump_file)
+        if dump_file:
+            dump_file.write(json.dumps(event))
+            dump_file.write('\n')
+        formatted_message = switch(event, show_progress)
         if formatted_message is not None:
-            show_fn(streamout(event, dump_file))
-
-
-def streamout(event, dump_file):
-    if dump_file:
-        dump_file.write(json.dumps(event))
-        dump_file.write('\n')
-    return switch(event)
+            show_fn = mk_show(event)
+            show_fn(formatted_message)
 
 
 def exit(msg):
@@ -234,22 +232,27 @@ def highlight(name):
     return highlight_
 
 
-def switch(rec):
+def switch(rec, show_progress):
 
     if 'stream' in rec:
         return rec['stream'].strip('\n')
 
     elif 'status' in rec:
-        if rec['status'].startswith('Downloading'):
-            term = '\r'
-        else:
-            term = ''
-
-        return '[STATUS] {0}: {1}{2}'.format(
+        status = '[STATUS] {0}: {1}'.format(
             rec.get('id', ''),
             rec['status'],
-            term,
         )
+
+        progress = rec.get('progressDetail')
+        if progress:
+            if show_progress:
+                return '{status} {p[current]}/{p[total]}\r'.format(
+                    status=status,
+                    p=progress,
+                )
+            return None
+        return status
+
     elif 'error' in rec:
         return '[ERROR] {0}\n'.format(rec['errorDetail']['message'])
     elif rec['event'] == 'tag':
