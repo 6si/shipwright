@@ -26,11 +26,10 @@ setup(
     author='Scott Robertson',
     tests_require=['nose'],
     install_requires=[
-        'docopt',
-        'zipper',
-        'requests>=2.4.0',
-        'docker-py>=1.6.0',
-        'GitPython>=1.0.1, <2.0.0',
+        'docopt>=0.6.2, <0.7.0',
+        'zipper>=0.0.3, <0.1.0',
+        'docker-py>=1.8.1, <2.0.0',
+        'GitPython>=2.0.5, <3.0.0',
     ],
     author_email='scott@6sense.com',
     description=(
