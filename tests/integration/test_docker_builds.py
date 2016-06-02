@@ -12,6 +12,7 @@ from shipwright import cli as shipw_cli
 
 def get_defaults():
     return {
+        '--account': None,
         '--dependents': [],
         '--dump-file': None,
         '--exact': [],
@@ -24,6 +25,7 @@ def get_defaults():
         'TARGET': [],
         'build': False,
         'push': False,
+        'tags': ['latest'],
     }
 
 

@@ -1,47 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Shipwright -- Builds shared Docker images within a common git repository.
-
-
-Usage:
-  shipwright [options] [build|push [--no-build]]
-             [TARGET]...
-             [-d TARGET]...
-             [-e TARGET]...
-             [-u TARGET]...
-             [-x TARGET]...
-
-
-Options:
-
- --help               Show all help information
-
- --dump-file=FILE     Save raw events to json to FILE. Useful for
-                      debugging.
-
- -H DOCKER_HOST       Override DOCKER_HOST if it's set in the environment.
-
- --x-assert-hostname  Disable strict hostchecking, useful for boot2docker.
-
- --account=DOCKER_HUB_ACCOUNT Override SW_NAMESPACE if it's set in the
-                      environment.
-
-
-
-
-Specifiers:
-
-  -d --dependents=TARGET  Build TARGET and all its dependents
-
-  -e --exact=TARGET       Build TARGET only - may fail if
-                          dependencies have not been built
-
-  -u --upto=TARGET        Build TARGET and it dependencies
-
-  -x --exclude=TARGET     Build everything but TARGET and
-                          its dependents
-
-
 Environment Variables:
 
   SW_NAMESPACE : If DOCKER_HUB_ACCOUNT is not passed on the command line
@@ -65,37 +23,38 @@ Examples:
 
   Build everything:
 
-    $ shipwright
+    $ shipwright build
 
   Build base, shared and service1:
 
-    $ shipwright service1
+    $ shipwright build -u service1
 
   Build base, shared and service1, service2:
 
-    $ shipwright -d service1
+    $ shipwright build -d service1
 
   Use exclude to build base, shared and service1, service2:
 
-    $ shipwright -x service3 -x independent
+    $ shipwright build -x service3 -x independent
 
   Build base, independent, shared and service3
 
-    $ shipwright -x service1
+    $ shipwright build -x service1
 
   Build base, independent, shared and service1, service2:
 
-    $ shipwright -d service1 -u independent
+    $ shipwright build -d service1 -u independent
 
   Note that specfying a TARGET is the same as -u so the following
   command is equivalent to the one above.
 
-  $ shipwright -d service1 independent
+  $ shipwright build -d service1 independent
 
 
 """
 from __future__ import absolute_import, print_function
 
+import argparse
 import functools
 import json
 import os
@@ -104,20 +63,108 @@ from itertools import chain, cycle
 
 import docker
 import git
-import pkg_resources
 from docker.utils import kwargs_from_env
-from docopt import docopt
 
 from shipwright.base import Shipwright
 from shipwright.colors import rainbow
 from shipwright.dependencies import dependents, exact, exclude, upto
 
 
-def main():
-    version = pkg_resources.get_distribution('dockhand').version
-    arguments = docopt(
-        __doc__, options_first=False, version='Shipwright ' + version,
+def argparser():
+    def a_arg(parser, *args, **kwargs):
+        default = kwargs.pop('default', [])
+        parser.add_argument(
+            *args,
+            action='append',
+            nargs='*',
+            default=default,
+            **kwargs
+        )
+
+    desc = 'Builds shared Docker images within a common git repository'
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument(
+        '-H', '--docker-host',
+        help="Override DOCKER_HOST if it's set in the environment.",
     )
+    parser.add_argument(
+        '--dump-file',
+        help='Save raw events to json to FILE, Useful for debugging',
+        type=argparse.FileType('w'),
+    )
+    parser.add_argument(
+        '--x-assert-hostname',
+        action='store_true',
+        help='Disable strict hostchecking, useful for boot2docker.',
+    )
+    parser.add_argument(
+        '--account',
+        help="Override SW_NAMESPACE if it's set in the environment.",
+    )
+
+    subparsers = parser.add_subparsers(help='sub-command help', dest='command')
+    subparsers.required = True
+
+    common = argparse.ArgumentParser(add_help=False)
+    a_arg(
+        common, '-d', '--dependants',
+        help='Build DEPENDANTS and all its dependants',
+    )
+    a_arg(
+        common, '-e', '--exact',
+        help='Build EXACT only - may fail if dependencies have not been built',
+    )
+    a_arg(
+        common, '-u', '--upto',
+        help='Build UPTO and it dependencies',
+    )
+    a_arg(
+        common, '-x', '--exclude',
+        help=' Build everything but EXCLUDE and its dependents',
+    )
+    a_arg(
+        common, '-t', '--tag',
+        dest='tags',
+        help='extra tags to apply to the images',
+    )
+
+    subparsers.add_parser(
+        'build', help='builds containers', parents=[common],
+    )
+    push = subparsers.add_parser(
+        'push', help='pushes built containers', parents=[common],
+    )
+    push.add_argument('--no-build', action='store_true')
+
+    return parser
+
+
+def _flatten(items):
+    return list(chain.from_iterable(items))
+
+
+def old_style_arg_dict(namespace):
+    ns = namespace
+    return {
+        '--account': ns.account,
+        '--dependents': _flatten(ns.dependants),
+        '--dump-file': ns.dump_file,
+        '--exact': _flatten(ns.exact),
+        '--exclude': _flatten(ns.exclude),
+        '--help': False,
+        '--no-build': getattr(ns, 'no_build', False),
+        '--upto': _flatten(ns.upto),
+        '--x-assert-hostname': ns.x_assert_hostname,
+        '-H': ns.docker_host,
+        'TARGET': [],
+        'build': ns.command == 'build',
+        'push': ns.command == 'push',
+        'tags': sorted(set(_flatten(ns.tags))) or ['latest'],
+    }
+
+
+def main():
+    arguments = old_style_arg_dict(argparser().parse_args())
     return run(
         repo=git.Repo(os.getcwd()),
         arguments=arguments,
@@ -179,7 +226,8 @@ def run(repo, arguments, client_cfg, environ):
     args, command_name, dump_file, config, client = process_arguments(
         repo, arguments, client_cfg, environ,
     )
-    command = getattr(Shipwright(config, repo, client), command_name)
+    sw = Shipwright(config, repo, client, arguments['tags'])
+    command = getattr(sw, command_name)
 
     show_progress = sys.stdout.isatty()
 

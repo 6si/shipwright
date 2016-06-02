@@ -9,11 +9,12 @@ from .container import container_name
 
 
 class Shipwright(object):
-    def __init__(self, config, source_control, docker_client):
+    def __init__(self, config, source_control, docker_client, tags):
         self.source_control = source_control
         self.docker_client = docker_client
         self.namespace = config['namespace']
         self.config = config
+        self.tags = tags
 
     def containers(self):
         cn = functools.partial(
@@ -84,21 +85,14 @@ class Shipwright(object):
         # now that we're built and tagged all the images with git commit,
         # (either during the process of building or forwarding the tag)
         # tag all containers with the branch name
-        branch_events = docker.tag_containers(
-            self.docker_client,
-            all_images,
-            branch,
-        )
-        for evt in branch_events:
-            yield evt
-
-        latest_events = docker.tag_containers(
-            self.docker_client,
-            all_images,
-            'latest',
-        )
-        for evt in latest_events:
-            yield evt
+        for tag in [branch] + self.tags:
+            tag_events = docker.tag_containers(
+                self.docker_client,
+                all_images,
+                tag,
+            )
+            for evt in tag_events:
+                yield evt
 
         raise StopIteration(all_images)
 
@@ -110,7 +104,7 @@ class Shipwright(object):
         branch = self.source_control.active_branch.name
 
         def push_tree(tree):
-            flat_tree = expand(branch, tree)
+            flat_tree = expand(branch + self.tags, tree)
             names_and_tags = [(x.name, x.last_built_ref) for x in flat_tree]
             return push.do_push(self.docker_client, names_and_tags)
 
@@ -122,7 +116,7 @@ class Shipwright(object):
             return push_tree(tree)
 
 
-def expand(branch, tree):
+def expand(tags, tree):
     """
     Flattens the tree to the list and triples each entry.
 
@@ -136,14 +130,8 @@ def expand(branch, tree):
     ]
 
     """
-    return [
-        [
-            d,
-            d._replace(last_built_ref=branch),
-            d._replace(last_built_ref='latest'),
-        ]
-        for d in dependencies.brood(tree)
-    ]
+    ds = dependencies.brood(tree)
+    return [d + [d._replace(last_built_ref=tag) for tag in tags] for d in ds]
 
 
 # (Tree -> [Target]) -> (Tree -> [Target]) -> [Target]
