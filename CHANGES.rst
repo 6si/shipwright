@@ -2,6 +2,8 @@
 ------------------
 
 - Support .dockerignore files on Py3k
+- shipwright 'build' sub-command is no-longer optional
+- Support extra tags with '-t'
 
 
 0.2.0 (2016-05-19)

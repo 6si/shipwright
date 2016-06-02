@@ -22,6 +22,7 @@ def get_defaults():
         'TARGET': [],
         'build': False,
         'push': False,
+        'tags': ['latest'],
     }
 
 
@@ -70,3 +71,80 @@ def test_assert_hostname(tmpdir):
     )
 
     assert not client.adapters['https://'].assert_hostname
+
+
+def test_args():
+    args = [
+        '--account=x', '--x-assert-hostname', 'build',
+        '-d', 'foo', '-d', 'bar',
+        '-t', 'latest', '-t', 'foo',
+    ]
+    parser = cli.argparser()
+    arguments = cli.old_style_arg_dict(parser.parse_args(args))
+
+    assert arguments == {
+        '--account': 'x',
+        '--dependents': ['foo', 'bar'],
+        '--dump-file': None,
+        '--exact': [],
+        '--exclude': [],
+        '--help': False,
+        '--no-build': False,
+        '--upto': [],
+        '--x-assert-hostname': True,
+        '-H': None,
+        'TARGET': [],
+        'build': True,
+        'push': False,
+        'tags': ['foo', 'latest'],
+    }
+
+
+def test_args_2():
+    args = [
+        '--account=x', '--x-assert-hostname', 'build',
+        '-d', 'foo', 'bar',
+        '-t', 'foo',
+    ]
+    parser = cli.argparser()
+    arguments = cli.old_style_arg_dict(parser.parse_args(args))
+
+    assert arguments == {
+        '--account': 'x',
+        '--dependents': ['foo', 'bar'],
+        '--dump-file': None,
+        '--exact': [],
+        '--exclude': [],
+        '--help': False,
+        '--no-build': False,
+        '--upto': [],
+        '--x-assert-hostname': True,
+        '-H': None,
+        'TARGET': [],
+        'build': True,
+        'push': False,
+        'tags': ['foo'],
+    }
+
+
+def test_args_base():
+    args = ['build']
+    parser = cli.argparser()
+    arguments = cli.old_style_arg_dict(parser.parse_args(args))
+
+    assert arguments == {
+        '--account': None,
+        '--dependents': [],
+        '--dump-file': None,
+        '--exact': [],
+        '--exclude': [],
+        '--help': False,
+        '--no-build': False,
+        '--upto': [],
+        '--x-assert-hostname': False,
+        '-H': None,
+        'TARGET': [],
+        'build': True,
+        'push': False,
+        'tags': ['latest'],
+    }
