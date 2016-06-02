@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 
 import git
+import pytest
 from docker import tls
 
-import pytest
 from shipwright import cli
 
 

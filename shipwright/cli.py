@@ -231,14 +231,24 @@ def run(repo, arguments, client_cfg, environ):
 
     show_progress = sys.stdout.isatty()
 
+    errors = []
+
     for event in command(*args):
         if dump_file:
             dump_file.write(json.dumps(event))
             dump_file.write('\n')
-        formatted_message = switch(event, show_progress)
-        if formatted_message is not None:
-            show_fn = mk_show(event)
-            show_fn(formatted_message)
+        if 'error' in event:
+            errors.append(event)
+        msg = pretty_event(event, show_progress)
+        if msg is not None:
+            print(msg)
+
+    if errors:
+        print('The following errors occurred:', file=sys.stdout)
+        messages = [pretty_event(error, True) for error in errors]
+        for msg in sorted(m for m in messages if m is not None):
+            print(msg, file=sys.stdout)
+        sys.exit(1)
 
 
 def exit(msg):
@@ -254,20 +264,24 @@ def memo(f, arg, memos={}):
         return memos[arg]
 
 
-def mk_show(evt):
-    if evt['event'] in ('build_msg', 'push') or 'error' in evt:
-        name = None
-        container = evt.get('container')
-        if container is not None:
-            name = container.name
-        else:
-            name = evt.get('image')
-        return memo(
-            highlight,
-            name,
-        )
+def pretty_event(evt, show_progress):
+    formatted_message = switch(evt, show_progress)
+    if formatted_message is None:
+        return
+    if not (evt['event'] in ('build_msg', 'push') or 'error' in evt):
+        return formatted_message
+
+    name = None
+    container = evt.get('container')
+    if container is not None:
+        name = container.name
     else:
-        return print
+        name = evt.get('image')
+    prettify = memo(
+        highlight,
+        name,
+    )
+    return prettify(formatted_message)
 
 colors = cycle(rainbow())
 
@@ -276,7 +290,7 @@ def highlight(name):
     color_fn = next(colors)
 
     def highlight_(msg):
-        print(color_fn(name) + ' | ' + msg)
+        return color_fn(name) + ' | ' + msg
     return highlight_
 
 
@@ -302,7 +316,7 @@ def switch(rec, show_progress):
         return status
 
     elif 'error' in rec:
-        return '[ERROR] {0}\n'.format(rec['errorDetail']['message'])
+        return '[ERROR] {0}'.format(rec['errorDetail']['message'])
     elif rec['event'] == 'tag':
         return 'Tagging {image} to {name}:{tag}'.format(
             name=rec['container'].name,

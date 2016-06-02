@@ -4,6 +4,7 @@
 - Support .dockerignore files on Py3k
 - shipwright 'build' sub-command is no-longer optional
 - Support extra tags with '-t'
+- Continue the build on failure, defer sys.exit until the end of the build.
 
 
 0.2.0 (2016-05-19)

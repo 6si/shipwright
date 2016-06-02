@@ -5,6 +5,7 @@ import shutil
 import docker
 import git
 import pkg_resources
+import pytest
 from docker import utils as docker_utils
 
 from shipwright import cli as shipw_cli
@@ -417,6 +418,55 @@ def test_exact(tmpdir):
         assert 'shipwright/base:latest' in base['RepoTags']
     finally:
         old_images = (
+            cli.images(name='shipwright/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+
+def test_exit_on_failure_but_build_completes(tmpdir):
+    path = str(tmpdir.join('failing-build'))
+    source = pkg_resources.resource_filename(
+        __name__,
+        'examples/failing-build',
+    )
+    repo = create_repo(path, source)
+    tag = repo.head.ref.commit.hexsha[:12]
+
+    client_cfg = docker_utils.kwargs_from_env()
+    cli = docker.Client(version='1.18', **client_cfg)
+
+    try:
+        with pytest.raises(SystemExit):
+            shipw_cli.run(
+                repo=repo,
+                client_cfg=client_cfg,
+                arguments=get_defaults(),
+                environ={},
+            )
+
+        base, works = (
+            cli.images(name='shipwright/base') +
+            cli.images(name='shipwright/works') +
+            cli.images(name='shipwright/crashy-from') +
+            cli.images(name='shipwright/crashy-dev')
+        )
+
+        assert set(base['RepoTags']) == {
+            'shipwright/base:master',
+            'shipwright/base:latest',
+            'shipwright/base:' + tag,
+        }
+
+        assert set(works['RepoTags']) == {
+            'shipwright/works:master',
+            'shipwright/works:latest',
+            'shipwright/works:' + tag,
+        }
+
+    finally:
+        old_images = (
+            cli.images(name='shipwright/works', quiet=True) +
             cli.images(name='shipwright/base', quiet=True)
         )
         for image in old_images:
