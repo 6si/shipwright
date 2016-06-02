@@ -51,50 +51,55 @@ class Shipwright(object):
 
     def build(self, specifiers):
         tree = dependencies.eval(specifiers, self.targets())
-        return self.build_tree(tree)
+        info = self._get_build_info(tree)
+        return self.build_tree(tree, info)
 
-    def build_tree(self, tree):
-        branch = self.source_control.active_branch.name
+    def _get_build_info(self, tree):
         this_ref_str = commits.hexsha(self.source_control.commit())
-
         current, targets = dependencies.needs_building(tree)
 
-        if current:
+        extra = [t._replace(last_built_ref=this_ref_str) for t in targets]
+
+        return {
+            'this_ref_str': this_ref_str,
+            'current': current,
+            'all_images': current + extra,
+            'targets': targets,
+        }
+
+    def build_tree(self, tree, info):
+        branch = self.source_control.active_branch.name
+        current = info['current']
+        this_ref_str = info['this_ref_str']
+        targets = info['targets']
+        all_images = info['all_images']
+
+        for container in current:
             # these containers weren't effected by the latest git changes
             # so we'll fast forward tag them with the build id. That way  any
             # of the containers that do need to be built can refer
             # to the skiped ones by user/image:<last_built_ref> which makes
             # them part of the same group.
-            events = docker.tag_containers(
+            yield docker.tag_container(
                 self.docker_client,
-                current,
+                container,
                 this_ref_str,
             )
-            for evt in events:
-                yield evt
 
         # what needs building
         for evt in build.do_build(self.docker_client, this_ref_str, targets):
             yield evt
 
-        all_images = current + [
-            t._replace(last_built_ref=this_ref_str)
-            for t in targets
-        ]
-
         # now that we're built and tagged all the images with git commit,
         # (either during the process of building or forwarding the tag)
         # tag all containers with the branch name
         for tag in [branch] + self.tags:
-            tag_events = docker.tag_containers(
-                self.docker_client,
-                all_images,
-                tag,
-            )
-            for evt in tag_events:
-                yield evt
-
-        raise StopIteration(all_images)
+            for image in all_images:
+                yield docker.tag_container(
+                    self.docker_client,
+                    image,
+                    tag,
+                )
 
     def push(self, specifiers, build=True):
         """
@@ -111,9 +116,13 @@ class Shipwright(object):
         tree = dependencies.eval(specifiers, self.targets())
 
         if build:
-            return bind(self.build_tree, push_tree, tree)
-        else:
-            return push_tree(tree)
+            info = self._get_build_info(tree)
+            for evt in self.build_tree(tree, info):
+                yield evt
+            tree = dependencies.make_tree(info['all_images'])
+
+        for evt in push_tree(tree):
+            yield evt
 
 
 def expand(tags, tree):
@@ -132,24 +141,6 @@ def expand(tags, tree):
     """
     ds = dependencies.brood(tree)
     return [d + [d._replace(last_built_ref=tag) for tag in tags] for d in ds]
-
-
-# (Tree -> [Target]) -> (Tree -> [Target]) -> [Target]
-def bind(a, b, tree):
-    """
-    Glues two Shipwright commands (functions) together.
-    """
-
-    iterator = a(tree)
-
-    while True:
-        try:
-            yield next(iterator)
-        except StopIteration as e:
-            x1 = e.args[0]
-            for evt in b(dependencies.make_tree(x1)):
-                yield evt
-            break
 
 
 _Target = namedtuple('Target', [

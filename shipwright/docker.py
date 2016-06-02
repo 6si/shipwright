@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+from docker import errors as d_errors
+
 
 def key_from_image_name(image_name):
     """
@@ -34,14 +36,27 @@ def encode_tag(tag):
     return tag.replace('/', '-')
 
 
-def tag_containers(client, containers, new_ref):
-    for container in containers:
-        tag = encode_tag(new_ref)
-        image = container.name + ':' + container.last_built_ref
+def tag_container(client, container, new_ref):
+    tag = encode_tag(new_ref)
+    image = container.name + ':' + container.last_built_ref
+    evt = {
+        'event': 'tag',
+        'container': container,
+        'image': image,
+        'tag': tag,
+    }
+    try:
         client.tag(
             image,
             container.name,
             tag=tag,
             force=True,
         )
-        yield dict(event='tag', container=container, image=image, tag=tag)
+    except d_errors.NotFound:
+        message = 'Error tagging {}, not found'.format(image)
+        evt.update({
+            'error': message,
+            'errorDetail': {'message': message},
+        })
+
+    return evt

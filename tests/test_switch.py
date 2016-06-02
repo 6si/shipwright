@@ -61,4 +61,4 @@ def test_error():
         'errorDetail': {
             'message': 'I AM ERROR',
         },
-    }) == '[ERROR] I AM ERROR\n'
+    }) == '[ERROR] I AM ERROR'
