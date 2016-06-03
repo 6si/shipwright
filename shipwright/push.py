@@ -17,5 +17,9 @@ def push(client, image_tag):
         d.update({'event': 'push', 'image': image})
         return d
 
-    results = client.push(image, tag, stream=True)
-    return [fmt(r) for r in results]
+    extra = {'event': 'push', 'image': image}
+
+    for evt in client.push(image, tag, stream=True):
+        d = compat.json_loads(evt)
+        d.update(extra)
+        yield d

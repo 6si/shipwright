@@ -107,12 +107,6 @@ class Shipwright(object):
 
         """
         branch = self.source_control.active_branch.name
-
-        def push_tree(tree):
-            flat_tree = expand(branch + self.tags, tree)
-            names_and_tags = [(x.name, x.last_built_ref) for x in flat_tree]
-            return push.do_push(self.docker_client, names_and_tags)
-
         tree = dependencies.eval(specifiers, self.targets())
 
         if build:
@@ -121,26 +115,15 @@ class Shipwright(object):
                 yield evt
             tree = dependencies.make_tree(info['all_images'])
 
-        for evt in push_tree(tree):
+        tags = [branch] + self.tags
+        names_and_tags = []
+        for dep in dependencies.brood(tree):
+            names_and_tags.append((dep.name, dep.last_built_ref))
+            for tag in tags:
+                names_and_tags.append((dep.name, tag))
+
+        for evt in push.do_push(self.docker_client, names_and_tags):
             yield evt
-
-
-def expand(tags, tree):
-    """
-    Flattens the tree to the list and triples each entry.
-
-    Ex.
-
-    > expand(make_tree([Target(..., last_built_ref='c1234567890a'...)]))
-    [
-        Target(..., last_built_ref='c1234567890a'),
-        Target(..., last_built_ref='develop'...),
-        Target(..., last_built_ref='latest'...),
-    ]
-
-    """
-    ds = dependencies.brood(tree)
-    return [d + [d._replace(last_built_ref=tag) for tag in tags] for d in ds]
 
 
 _Target = namedtuple('Target', [
