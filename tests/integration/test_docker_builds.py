@@ -471,3 +471,51 @@ def test_exit_on_failure_but_build_completes(tmpdir):
         )
         for image in old_images:
             cli.remove_image(image, force=True)
+
+
+def test_short_name_target(tmpdir):
+    path = str(tmpdir.join('shipwright-sample'))
+    source = pkg_resources.resource_filename(
+        __name__,
+        'examples/shipwright-sample',
+    )
+    repo = create_repo(path, source)
+    tag = repo.head.ref.commit.hexsha[:12]
+
+    client_cfg = docker_utils.kwargs_from_env()
+    cli = docker.Client(version='1.18', **client_cfg)
+
+    try:
+        defaults = get_defaults()
+        defaults['--upto'] = ['shared']
+        shipw_cli.run(
+            repo=repo,
+            client_cfg=client_cfg,
+            arguments=defaults,
+            environ={},
+        )
+
+        shared, base = (
+            cli.images(name='shipwright/service1') +
+            cli.images(name='shipwright/shared') +
+            cli.images(name='shipwright/base')
+        )
+
+        assert set(shared['RepoTags']) == {
+            'shipwright/shared:master',
+            'shipwright/shared:latest',
+            'shipwright/shared:' + tag,
+        }
+
+        assert set(base['RepoTags']) == {
+            'shipwright/base:master',
+            'shipwright/base:latest',
+            'shipwright/base:' + tag,
+        }
+    finally:
+        old_images = (
+            cli.images(name='shipwright/shared', quiet=True) +
+            cli.images(name='shipwright/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)

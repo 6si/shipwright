@@ -5,6 +5,7 @@
 - shipwright 'build' sub-command is no-longer optional
 - Support extra tags with '-t'
 - Continue the build on failure, defer sys.exit until the end of the build.
+- Support shor names in TARGETS.
 
 
 0.2.0 (2016-05-19)

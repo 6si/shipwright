@@ -85,13 +85,13 @@ def needs_building(tree):
     return skip, needs
 
 
-Root = namedtuple('Root', 'name, children')
+Root = namedtuple('Root', ['name', 'short_name', 'children'])
 
 
 def _find(tree, name):
     def find_(loc):
         target = loc.node()
-        return target.name == name
+        return target.name == name or target.short_name == name
 
     return tree.find(find_)
 
@@ -129,7 +129,7 @@ def make_tree(containers):
 
     """
 
-    root = Root(None, ())
+    root = Root(None, None, ())
     tree = zipper.zipper(root, is_branch, children, make_node)
 
     for c in containers:
@@ -316,45 +316,27 @@ def setup_module(module):
     from .container import Container
     from .base import Target
 
+    def target(name, dir_path, path, parent):
+        return Target(
+            Container(name, dir_path, path, parent, name),
+            'abc', 3, 3, None,
+        )
+
     module.targets = [
-        Target(
-            Container(
-                'shipwright_test/2', 'path2/', 'path2/Dockerfile',
-                'shipwright_test/1',
-            ),
-            'abc',
-            3,
-            3,
-            None,
+        target(
+            'shipwright_test/2', 'path2/', 'path2/Dockerfile',
+            'shipwright_test/1',
         ),
-        Target(
-            Container(
-                'shipwright_test/1', 'path1/', 'path1/Dockerfile',
-                'ubuntu',
-            ),
-            'abc',
-            3,
-            3,
-            None,
+        target(
+            'shipwright_test/1', 'path1/', 'path1/Dockerfile',
+            'ubuntu',
         ),
-        Target(
-            Container(
-                'shipwright_test/3', 'path3/', 'path3/Dockerfile',
-                'shipwright_test/2',
-            ),
-            'abc',
-            3,
-            3,
-            None,
+        target(
+            'shipwright_test/3', 'path3/', 'path3/Dockerfile',
+            'shipwright_test/2',
         ),
-        Target(
-            Container(
-                'shipwright_test/independent', 'independent',
-                'path1/Dockerfile', 'ubuntu',
-            ),
-            'abc',
-            3,
-            3,
-            None,
+        target(
+            'shipwright_test/independent', 'independent',
+            'path1/Dockerfile', 'ubuntu',
         ),
     ]
