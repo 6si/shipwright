@@ -3,7 +3,24 @@ from __future__ import absolute_import
 import os
 from collections import namedtuple
 
-Container = namedtuple('Container', 'name,dir_path,path,parent')
+Container = namedtuple(
+    'Container',
+    ['name', 'dir_path', 'path', 'parent', 'short_name'],
+)
+
+
+def list_containers(namespace, name_map, root_path):
+    containers = []
+    for path in build_files(root_path):
+        name, short_name = container_name(namespace, name_map, root_path, path)
+        containers.append(Container(
+            name=name,
+            short_name=short_name,
+            dir_path=os.path.dirname(path),
+            path=path,
+            parent=parent(path),
+        ))
+    return containers
 
 
 def container_name(namespace, name_map, root_path, path):
@@ -14,84 +31,24 @@ def container_name(namespace, name_map, root_path, path):
     >>> container_name(
     ...     'shipwright', {'blah':'foo/blah'}, 'x/', 'x/blah/Dockerfile',
     ... )
-    'foo/blah'
+    ('foo/blah', 'foo/blah')
 
     >>> container_name(
     ...     'shipwright', {'blah':'foo/blah'}, 'x/', 'x/baz/Dockerfile'
     ... )
-    'shipwright/baz'
+    ('shipwright/baz', 'baz')
 
     """
 
-    docker_repo = None
     if path.startswith(root_path):
         relative_path = os.path.dirname(path[len(root_path):])
         docker_repo = name_map.get(relative_path)
 
-    if docker_repo is not None:
-        return docker_repo
-    else:
-        # try to guess the name from the path
-        return '/'.join([namespace, name(path)])
-
-
-# namespace -> path -> [Container]
-def containers(name_func, path):
-    """
-    Given a namespace and a path return a list of Containers. Each
-    container's name will be based on the namespace and directory
-    where the Dockerfile was located.
-
-    >>> from shipwright import fn
-    >>> test_root = getfixture('tmpdir').mkdir('containers')
-    >>> test_root.mkdir('container1').join('Dockerfile').write('FROM ubuntu')
-    >>> test_root.mkdir('container2').join('Dockerfile').write('FROM ubuntu')
-    >>> container3 = test_root.mkdir('container3')
-    >>> container3.join('Dockerfile').write('FROM ubuntu')
-    >>> container3.join('Dockerfile-dev').write('FROM ubuntu')
-    >>> other = test_root.mkdir('other')
-    >>> _ = other.mkdir('subdir1')
-    >>> other.mkdir('subdir2').join('empty.txt').write('')
-    >>> containers(lambda x: x, str(test_root)) # doctest: +ELLIPSIS
-    [Container(...), Container(...), Container(...), Container(...)]
-    """
-    return [
-        container_from_path(name_func, container_path)
-        for container_path in build_files(path)
-    ]
-
-
-# (path -> name) -> path -> Container(name, path, parent)
-def container_from_path(name_func, path):
-    """
-    Given a name_func() that can determine the repository
-    name for an image from a path; and a path to a Dockerfile
-    parse the file and return a corresponding Container
-
-    The runtime uses a more sophisticated name_func() for
-    testing/demonstration purposes we simply append
-    "shipwright_test" to the directory name.
-
-    >>> def name_func(path):
-    ...   return 'shipwright_test/' + os.path.basename(os.path.dirname(path))
-
-    >>> test_root = getfixture('tmpdir').mkdir('from_path')
-    >>> path = test_root.mkdir('container1').join('Dockerfile')
-    >>> path.write('FROM ubuntu')
-    >>> container = container_from_path(name_func, str(path))
-    >>> container  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
-    Container(name='shipwright_test/container1',
-              dir_path='.../container1',
-              path='.../container1/Dockerfile',
-              parent='ubuntu')
-    """
-
-    return Container(
-        name=name_func(path),
-        dir_path=os.path.dirname(path),
-        path=path,
-        parent=parent(path),
-    )
+        if docker_repo is not None:
+            return docker_repo, docker_repo
+    short_name = name(path)
+    # try to guess the name from the path
+    return namespace + '/' + short_name, short_name
 
 
 # path -> iter([path ... / Dockerfile, ... ])

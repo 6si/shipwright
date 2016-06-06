@@ -1,11 +1,8 @@
 from __future__ import absolute_import
 
-import functools
 from collections import namedtuple
 
-from . import build, commits, dependencies, docker, push
-from .container import containers as list_containers
-from .container import container_name
+from . import build, commits, container, dependencies, docker, push
 
 
 class Shipwright(object):
@@ -17,14 +14,9 @@ class Shipwright(object):
         self.tags = tags
 
     def containers(self):
-        cn = functools.partial(
-            container_name,
+        return container.list_containers(
             self.namespace,
             self.config.get('names', {}),
-            self.source_control.working_dir,
-        )
-        return list_containers(
-            cn,
             self.source_control.working_dir,
         )
 
@@ -74,7 +66,7 @@ class Shipwright(object):
         targets = info['targets']
         all_images = info['all_images']
 
-        for container in current:
+        for c in current:
             # these containers weren't effected by the latest git changes
             # so we'll fast forward tag them with the build id. That way  any
             # of the containers that do need to be built can refer
@@ -82,7 +74,7 @@ class Shipwright(object):
             # them part of the same group.
             yield docker.tag_container(
                 self.docker_client,
-                container,
+                c,
                 this_ref_str,
             )
 
@@ -136,6 +128,10 @@ class Target(_Target):
     @property
     def name(self):
         return self.container.name
+
+    @property
+    def short_name(self):
+        return self.container.short_name
 
     @property
     def dir_path(self):
