@@ -20,7 +20,7 @@ history = open('CHANGES.rst').read().replace('.. :changelog:', '')
 
 setup(
     name='dockhand',
-    version='0.3.2',
+    version='0.3.3.dev0',
     url='https://github.com/graingert/dockhand/',
     license='Apache Software License',
     author='Scott Robertson',
