@@ -1,14 +1,7 @@
 0.3.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
-
-
-0.3.1 (2016-06-06)
-------------------
-
 - Fix issue when images are built, but not in git.
-
 
 0.3.0 (2016-06-06)
 ------------------

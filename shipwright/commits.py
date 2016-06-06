@@ -15,8 +15,10 @@ def _max_commit(commit_map, commits):
     # return the pair (tag, relative_commit)
     if commits:
         rel_commits = ((c, commit_map[c]) for c in commits if c in commit_map)
-        if rel_commits:
+        try:
             return max(rel_commits)
+        except ValueError:
+            pass
     return None, -1
 
 
