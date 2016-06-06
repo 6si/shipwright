@@ -15,9 +15,9 @@ def _max_commit(commit_map, commits):
     # return the pair (tag, relative_commit)
     if commits:
         rel_commits = ((c, commit_map[c]) for c in commits if c in commit_map)
-        return max(rel_commits)
-    else:
-        return None, -1
+        if rel_commits:
+            return max(rel_commits)
+    return None, -1
 
 
 def _last_commit(repo, path):
