@@ -1,7 +1,7 @@
 0.3.3 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Isolate all git functionality, so as to create pluggable Source Control wrappers.
 
 
 0.3.2 (2016-06-06)

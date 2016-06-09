@@ -7,7 +7,7 @@ from .fn import merge
 from .tar import mkcontext
 
 
-def do_build(client, git_rev, targets):
+def do_build(client, build_ref, targets):
     """
     Generic function for building multiple containers while
     notifying a callback function with output produced.
@@ -28,13 +28,13 @@ def do_build(client, git_rev, targets):
     """
 
     for target in targets:
-        for evt in build(client, git_rev, target):
+        for evt in build(client, build_ref, target):
             yield evt
 
 
-def build(client, git_rev, container):
+def build(client, build_ref, container):
     """
-    builds the given container tagged with <git_rev> and ensures that
+    builds the given container tagged with <build_ref> and ensures that
     it depends on it's parent if it's part of this build group (shares
     the same namespace)
     """
@@ -42,7 +42,7 @@ def build(client, git_rev, container):
     merge_config = {
         'event': 'build_msg',
         'container': container,
-        'rev': git_rev,
+        'rev': build_ref,
     }
 
     def process_event_(evt):
@@ -50,11 +50,11 @@ def build(client, git_rev, container):
         return merge(merge_config, evt_parsed)
 
     build_evts = client.build(
-        fileobj=mkcontext(git_rev, container.path),
+        fileobj=mkcontext(build_ref, container.path),
         rm=True,
         custom_context=True,
         stream=True,
-        tag='{0}:{1}'.format(container.name, git_rev),
+        tag='{0}:{1}'.format(container.name, build_ref),
         dockerfile=os.path.basename(container.path),
     )
 

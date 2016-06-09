@@ -49,7 +49,6 @@ def eval(specifiers, targets):
     return fn.compose(*exclusions)(tree)
 
 
-# Ref = git.Ref
 # item = <anything>
 # [Ref] -> Ref -> [Containers] -> [item]
 def needs_building(tree):
@@ -70,7 +69,7 @@ def needs_building(tree):
                 for modified_loc in breadth_first_iter(loc):
                     target = modified_loc.node()
 
-                    # only yield targets commited to git
+                    # only yield targets in source control
                     if target.current_rel is not None:
                         needs.append(target)
                 loc = gen.send(True)  # don't check this locations children
@@ -314,7 +313,7 @@ def _names_list(targets):
 
 def setup_module(module):
     from .container import Container
-    from .base import Target
+    from .source_control import Target
 
     def target(name, dir_path, path, parent):
         return Target(
