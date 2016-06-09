@@ -57,7 +57,7 @@ def test_sample(tmpdir):
 
     try:
         shipw_cli.run(
-            repo=repo,
+            path=path,
             client_cfg=client_cfg,
             arguments=get_defaults(),
             environ={},
@@ -110,7 +110,7 @@ def test_multi_dockerfile(tmpdir):
 
     try:
         shipw_cli.run(
-            repo=repo,
+            path=path,
             client_cfg=client_cfg,
             arguments=get_defaults(),
             environ={},
@@ -164,7 +164,7 @@ def test_clean_tree_avoids_rebuild(tmpdir):
 
     try:
         shipw_cli.run(
-            repo=repo,
+            path=path,
             client_cfg=client_cfg,
             arguments=get_defaults(),
             environ={},
@@ -175,7 +175,7 @@ def test_clean_tree_avoids_rebuild(tmpdir):
         new_tag = repo.head.ref.commit.hexsha[:12]
 
         shipw_cli.run(
-            repo=repo,
+            path=path,
             client_cfg=client_cfg,
             arguments=get_defaults(),
             environ={},
@@ -242,7 +242,7 @@ def test_clean_tree_avoids_rebuild_new_image_definition(tmpdir):
 
     try:
         shipw_cli.run(
-            repo=repo,
+            path=path,
             client_cfg=client_cfg,
             arguments=get_defaults(),
             environ={},
@@ -258,7 +258,7 @@ def test_clean_tree_avoids_rebuild_new_image_definition(tmpdir):
         new_tag = repo.head.ref.commit.hexsha[:12]
 
         shipw_cli.run(
-            repo=repo,
+            path=path,
             client_cfg=client_cfg,
             arguments=get_defaults(),
             environ={},
@@ -317,7 +317,7 @@ def test_dump_file(tmpdir):
         __name__,
         'examples/shipwright-sample',
     )
-    repo = create_repo(path, source)
+    create_repo(path, source)
 
     client_cfg = docker_utils.kwargs_from_env()
 
@@ -327,7 +327,7 @@ def test_dump_file(tmpdir):
         args = get_defaults()
         args['--dump-file'] = str(dump_file)
         shipw_cli.run(
-            repo=repo,
+            path=path,
             client_cfg=client_cfg,
             arguments=args,
             environ={},
@@ -350,7 +350,7 @@ def test_exclude(tmpdir):
         __name__,
         'examples/shipwright-sample',
     )
-    repo = create_repo(path, source)
+    create_repo(path, source)
     client_cfg = docker_utils.kwargs_from_env()
 
     cli = docker.Client(version='1.18', **client_cfg)
@@ -363,7 +363,7 @@ def test_exclude(tmpdir):
 
     try:
         shipw_cli.run(
-            repo=repo,
+            path=path,
             client_cfg=client_cfg,
             arguments=args,
             environ={},
@@ -391,7 +391,7 @@ def test_exact(tmpdir):
         __name__,
         'examples/shipwright-sample',
     )
-    repo = create_repo(path, source)
+    create_repo(path, source)
     client_cfg = docker_utils.kwargs_from_env()
 
     cli = docker.Client(version='1.18', **client_cfg)
@@ -403,7 +403,7 @@ def test_exact(tmpdir):
 
     try:
         shipw_cli.run(
-            repo=repo,
+            path=path,
             client_cfg=client_cfg,
             arguments=args,
             environ={},
@@ -439,7 +439,7 @@ def test_exit_on_failure_but_build_completes(tmpdir):
     try:
         with pytest.raises(SystemExit):
             shipw_cli.run(
-                repo=repo,
+                path=path,
                 client_cfg=client_cfg,
                 arguments=get_defaults(),
                 environ={},
@@ -489,7 +489,7 @@ def test_short_name_target(tmpdir):
         defaults = get_defaults()
         defaults['--upto'] = ['shared']
         shipw_cli.run(
-            repo=repo,
+            path=path,
             client_cfg=client_cfg,
             arguments=defaults,
             environ={},

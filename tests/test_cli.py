@@ -35,20 +35,20 @@ def create_repo(path):
 
 def test_without_json_manifest(tmpdir):
     path = str(tmpdir.join('no-manifest'))
-    repo = create_repo(path)
+    create_repo(path)
     with pytest.raises(SystemExit):
         cli.process_arguments(
-            repo, get_defaults(), client_cfg={}, environ={},
+            path, get_defaults(), client_cfg={}, environ={},
         )
 
 
 def test_push_also_builds(tmpdir):
     path = str(tmpdir.join('no-manifest'))
-    repo = create_repo(path)
+    create_repo(path)
     in_args = get_defaults()
     in_args['push'] = True
     args, _, _, _, _ = cli.process_arguments(
-        repo, in_args, client_cfg={},
+        path, in_args, client_cfg={},
         environ={'SW_NAMESPACE': 'eg'},
     )
     specifiers, build = args
@@ -57,12 +57,12 @@ def test_push_also_builds(tmpdir):
 
 def test_assert_hostname(tmpdir):
     path = str(tmpdir.join('no-manifest'))
-    repo = create_repo(path)
+    create_repo(path)
     args = get_defaults()
     args['--x-assert-hostname'] = True
     tls_config = tls.TLSConfig()
     _, _, _, _, client = cli.process_arguments(
-        repo, args,
+        path, args,
         client_cfg={
             'base_url': 'https://example.com:443/api/v1/',
             'tls': tls_config,

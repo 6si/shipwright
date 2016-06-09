@@ -62,9 +62,9 @@ import sys
 from itertools import chain, cycle
 
 import docker
-import git
 from docker.utils import kwargs_from_env
 
+from shipwright import source_control
 from shipwright.base import Shipwright
 from shipwright.colors import rainbow
 from shipwright.dependencies import dependents, exact, exclude, upto
@@ -81,7 +81,7 @@ def argparser():
             **kwargs
         )
 
-    desc = 'Builds shared Docker images within a common git repository'
+    desc = 'Builds shared Docker images within a common repository'
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument(
         '-H', '--docker-host',
@@ -166,17 +166,17 @@ def old_style_arg_dict(namespace):
 def main():
     arguments = old_style_arg_dict(argparser().parse_args())
     return run(
-        repo=git.Repo(os.getcwd()),
+        path=os.getcwd(),
         arguments=arguments,
         client_cfg=kwargs_from_env(),
         environ=os.environ,
     )
 
 
-def process_arguments(repo, arguments, client_cfg, environ):
+def process_arguments(path, arguments, client_cfg, environ):
     try:
         config = json.load(open(
-            os.path.join(repo.working_dir, '.shipwright.json'),
+            os.path.join(path, '.shipwright.json'),
         ))
     except IOError:
         config = {
@@ -222,11 +222,14 @@ def process_arguments(repo, arguments, client_cfg, environ):
     return args, command_name, dump_file, config, client
 
 
-def run(repo, arguments, client_cfg, environ):
+def run(path, arguments, client_cfg, environ):
     args, command_name, dump_file, config, client = process_arguments(
-        repo, arguments, client_cfg, environ,
+        path, arguments, client_cfg, environ,
     )
-    sw = Shipwright(config, repo, client, arguments['tags'])
+    namespace = config['namespace']
+    name_map = config.get('names', {})
+    scm = source_control.GitSourceControl(path, namespace, name_map)
+    sw = Shipwright(scm, client, arguments['tags'])
     command = getattr(sw, command_name)
 
     show_progress = sys.stdout.isatty()
