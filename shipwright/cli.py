@@ -176,12 +176,12 @@ def process_arguments(path, arguments, client_cfg, environ):
         config = json.load(open(
             os.path.join(path, '.shipwright.json'),
         ))
-    except IOError:
+    except EnvironmentError:
         config = {
             'namespace': (
-                arguments['--account'] or
-                environ.get('SW_NAMESPACE')
-            ),
+                arguments.get('DOCKER_HUB_ACCOUNT', None) or
+                os.environ.get('SW_NAMESPACE', None)
+            )
         }
     if config['namespace'] is None:
         exit(
