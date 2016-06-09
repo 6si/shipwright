@@ -163,6 +163,7 @@ def test_clean_tree_avoids_rebuild(tmpdir):
     cli = docker.Client(version='1.18', **client_cfg)
 
     try:
+
         shipw_cli.run(
             path=path,
             client_cfg=client_cfg,
@@ -514,6 +515,101 @@ def test_short_name_target(tmpdir):
         }
     finally:
         old_images = (
+            cli.images(name='shipwright/shared', quiet=True) +
+            cli.images(name='shipwright/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+
+def test_child_inherits_parents_build_tag(tmpdir):
+    tmp = tmpdir.join('shipwright-sample')
+    path = str(tmp)
+    source = pkg_resources.resource_filename(
+        __name__,
+        'examples/shipwright-sample',
+    )
+    repo = create_repo(path, source)
+    old_tag = repo.head.ref.commit.hexsha[:12]
+
+    client_cfg = docker_utils.kwargs_from_env()
+    cli = docker.Client(version='1.18', **client_cfg)
+
+    try:
+
+        shipw_cli.run(
+            path=path,
+            client_cfg=client_cfg,
+            arguments=get_defaults(),
+            environ={},
+        )
+
+        tmp.join('shared/base.txt').write('Hi mum')
+        commit_untracked(repo)
+        new_tag = repo.head.ref.commit.hexsha[:12]
+
+        # Currently service1 has not had any changes, and so naivly would not
+        # need to be built, however because it's parent, shared has changes
+        # it will need to be rebuilt with the parent's build tag.
+
+        # Dockhand asks the question: What is the latest commit in this
+        # directory, and all of this image's parents?
+
+        shipw_cli.run(
+            path=path,
+            client_cfg=client_cfg,
+            arguments=get_defaults(),
+            environ={},
+        )
+
+        service1a, service1b, sharedA, sharedB, base = (
+            cli.images(name='shipwright/service1') +
+            cli.images(name='shipwright/shared') +
+            cli.images(name='shipwright/base')
+        )
+
+        service1a, service1b = sorted(
+            (service1a, service1b),
+            key=lambda x: len(x['RepoTags']),
+            reverse=True,
+        )
+
+        sharedA, sharedB = sorted(
+            (sharedA, sharedB),
+            key=lambda x: len(x['RepoTags']),
+            reverse=True,
+        )
+
+        assert set(service1a['RepoTags']) == {
+            'shipwright/service1:master',
+            'shipwright/service1:latest',
+            'shipwright/service1:' + new_tag,
+        }
+
+        assert set(service1b['RepoTags']) == {
+            'shipwright/service1:' + old_tag,
+        }
+
+        assert set(sharedA['RepoTags']) == {
+            'shipwright/shared:master',
+            'shipwright/shared:latest',
+            'shipwright/shared:' + new_tag,
+        }
+
+        assert set(sharedB['RepoTags']) == {
+            'shipwright/shared:' + old_tag,
+        }
+
+        assert set(base['RepoTags']) == {
+            'shipwright/base:master',
+            'shipwright/base:latest',
+            'shipwright/base:' + old_tag,
+            'shipwright/base:' + new_tag,
+        }
+
+    finally:
+        old_images = (
+            cli.images(name='shipwright/service1', quiet=True) +
             cli.images(name='shipwright/shared', quiet=True) +
             cli.images(name='shipwright/base', quiet=True)
         )

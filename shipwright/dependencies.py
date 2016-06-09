@@ -49,41 +49,6 @@ def eval(specifiers, targets):
     return fn.compose(*exclusions)(tree)
 
 
-# item = <anything>
-# [Ref] -> Ref -> [Containers] -> [item]
-def needs_building(tree):
-    gen = breadth_first_iter(tree)
-    next(gen)  # skip root
-    loc = next(gen)
-
-    skip = []
-    needs = []
-
-    while True:
-        try:
-            target = loc.node()
-
-            if target.current_rel > target.last_built_rel:
-                # target has changes, it and all it's desendents need
-                # to be rebuilt
-                for modified_loc in breadth_first_iter(loc):
-                    target = modified_loc.node()
-
-                    # only yield targets in source control
-                    if target.current_rel is not None:
-                        needs.append(target)
-                loc = gen.send(True)  # don't check this locations children
-            else:
-                if target.last_built_ref:
-                    skip.append(target)
-
-                loc = next(gen)
-        except StopIteration:
-            break
-
-    return skip, needs
-
-
 Root = namedtuple('Root', ['name', 'short_name', 'children'])
 
 
@@ -189,9 +154,7 @@ def breadth_first_iter(loc):
     tocheck = [loc]
     while tocheck:
         l = tocheck.pop(0)
-        skip = yield l
-        if skip:
-            continue
+        yield l
         child = l.down()
         while child:
             tocheck.append(child)
@@ -318,7 +281,7 @@ def setup_module(module):
     def target(name, dir_path, path, parent):
         return Target(
             Container(name, dir_path, path, parent, name),
-            'abc', 3, 3, None,
+            'abc', None,
         )
 
     module.targets = [
