@@ -1,12 +1,12 @@
 from __future__ import absolute_import
 
-from collections import namedtuple
 import functools
+import operator
+from collections import namedtuple
 
 import zipper
 
 from . import fn
-from .fn import curry
 
 
 def union(inclusions, tree):
@@ -14,7 +14,7 @@ def union(inclusions, tree):
         # for each tree func run it, convert to set
         lambda p, f: p | set(f(tree)),
         inclusions,
-        set()
+        set(),
     )
 
     return make_tree(targets)
@@ -37,7 +37,7 @@ def eval(specifiers, targets):
     exclusions = []
 
     for spec in specifiers:
-        if spec.func_name == 'exclude':
+        if spec.func == exclude:
             exclusions.append(spec)
         else:
             inclusions.append(spec)
@@ -49,7 +49,6 @@ def eval(specifiers, targets):
     return fn.compose(*exclusions)(tree)
 
 
-# Ref = git.Ref
 # item = <anything>
 # [Ref] -> Ref -> [Containers] -> [item]
 def needs_building(tree):
@@ -70,12 +69,12 @@ def needs_building(tree):
                 for modified_loc in breadth_first_iter(loc):
                     target = modified_loc.node()
 
-                    # only yield targets commited to git
+                    # only yield targets in source control
                     if target.current_rel is not None:
                         needs.append(target)
                 loc = gen.send(True)  # don't check this locations children
             else:
-                if target.last_built_rel:
+                if target.last_built_ref:
                     skip.append(target)
 
                 loc = next(gen)
@@ -85,9 +84,15 @@ def needs_building(tree):
     return skip, needs
 
 
-Root = namedtuple('Root', 'name, children')
+Root = namedtuple('Root', ['name', 'short_name', 'children'])
 
-# [Container] -> Loc Container
+
+def _find(tree, name):
+    def find_(loc):
+        target = loc.node()
+        return target.name == name or target.short_name == name
+
+    return tree.find(find_)
 
 
 def make_tree(containers):
@@ -123,18 +128,22 @@ def make_tree(containers):
 
     """
 
-    root = Root(None, ())
+    root = Root(None, None, ())
     tree = zipper.zipper(root, is_branch, children, make_node)
 
     for c in containers:
 
-        branch_children, root_children = split(is_child(c), tree.children())
+        def is_child(target):
+            if not isinstance(target, Root):
+                return target.parent == c.name
+
+        branch_children, root_children = split(is_child, tree.children())
         t = c._replace(children=tuple(branch_children))
 
         if branch_children:
             tree = tree.edit(replace, tuple(root_children))
 
-        loc = tree.find(fmap(is_target(t.parent)))
+        loc = _find(tree, t.parent)
         if loc:
             tree = loc.insert(t).top()
         else:
@@ -157,7 +166,7 @@ def is_branch(item):
 
 def make_node(node, children):
     # keep children sorted to make testing easier
-    ch = tuple(sorted(children, key=fn.getattr('name')))
+    ch = tuple(sorted(children, key=operator.attrgetter('name')))
     return node._replace(children=ch)
 
 
@@ -189,33 +198,6 @@ def breadth_first_iter(loc):
             child = child.right()
 
 
-@curry
-def is_target(name, target):
-    """
-    >>> from . import Target
-    >>> from .container import Container
-
-    >>> target = Target(
-    ...     Container('test', None, None, None), None, None, None, None,
-    ... )
-    >>> is_target('test', target)
-    True
-    """
-    return target.name == name
-
-
-@curry
-def is_child(parent, target):
-    if not isinstance(target, Root):
-        return target.parent == parent.name
-
-
-# (a -> b) -> Loc a -> b
-@curry
-def fmap(func, loc):
-    return func(loc.node())
-
-
 # Loc -> [Target]
 def lineage(loc):
     results = []
@@ -227,7 +209,6 @@ def lineage(loc):
 
 
 # (a -> Bool) -> [a] ->[a], [a]
-@curry
 def split(f, children):
     """
     Given a function that returns true or false and a list. Return
@@ -252,7 +233,6 @@ def brood(loc):
 
 
 # Target -> Tree -> [Target]
-@curry
 def upto(target, tree):
     """
     returns target and everything it depends on
@@ -263,13 +243,12 @@ def upto(target, tree):
     ['shipwright_test/1', 'shipwright_test/2']
     """
 
-    loc = tree.find(fmap(is_target(target)))
+    loc = _find(tree, target)
 
     return lineage(loc)  # make_tree(lineage(loc))
 
 
 # Target -> Tree -> [Target]
-@curry
 def dependents(target, tree):
     """
     Returns a target it's dependencies and
@@ -281,12 +260,12 @@ def dependents(target, tree):
     ['shipwright_test/1', 'shipwright_test/2', 'shipwright_test/3']
     """
 
-    loc = tree.find(fmap(is_target(target)))
+    loc = _find(tree, target)
+
     return lineage(loc) + brood(loc)
 
 
 # Target -> Tree -> [Target]
-@curry
 def exact(target, tree):
     """
     Returns only the target.
@@ -298,13 +277,12 @@ def exact(target, tree):
 
     """
 
-    loc = tree.find(fmap(is_target(target)))
+    loc = _find(tree, target)
 
     return [loc.node()]
 
 
 # Target -> Tree -> Tree
-@curry
 def exclude(target, tree):
     """
     Returns everything but the target and it's dependents. If target
@@ -317,7 +295,7 @@ def exclude(target, tree):
 
     """
 
-    loc = tree.find(fmap(is_target(target)))
+    loc = _find(tree, target)
     if loc:
         return loc.remove().top()
     else:
@@ -335,47 +313,29 @@ def _names_list(targets):
 
 def setup_module(module):
     from .container import Container
-    from . import Target
+    from .source_control import Target
+
+    def target(name, dir_path, path, parent):
+        return Target(
+            Container(name, dir_path, path, parent, name),
+            'abc', 3, 3, None,
+        )
 
     module.targets = [
-        Target(
-            Container(
-                'shipwright_test/2', 'path2/', 'path2/Dockerfile',
-                'shipwright_test/1',
-            ),
-            'abc',
-            3,
-            3,
-            None
+        target(
+            'shipwright_test/2', 'path2/', 'path2/Dockerfile',
+            'shipwright_test/1',
         ),
-        Target(
-            Container(
-                'shipwright_test/1', 'path1/', 'path1/Dockerfile',
-                'ubuntu',
-            ),
-            'abc',
-            3,
-            3,
-            None
+        target(
+            'shipwright_test/1', 'path1/', 'path1/Dockerfile',
+            'ubuntu',
         ),
-        Target(
-            Container(
-                'shipwright_test/3', 'path3/', 'path3/Dockerfile',
-                'shipwright_test/2',
-            ),
-            'abc',
-            3,
-            3,
-            None
+        target(
+            'shipwright_test/3', 'path3/', 'path3/Dockerfile',
+            'shipwright_test/2',
         ),
-        Target(
-            Container(
-                'shipwright_test/independent', 'independent',
-                'path1/Dockerfile', 'ubuntu',
-            ),
-            'abc',
-            3,
-            3,
-            None
-        )
+        target(
+            'shipwright_test/independent', 'independent',
+            'path1/Dockerfile', 'ubuntu',
+        ),
     ]

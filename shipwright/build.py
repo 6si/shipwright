@@ -1,17 +1,13 @@
-import json
+from __future__ import absolute_import
 
-from . import fn
+import os
 
-from .fn import compose, curry, maybe, flat_map, merge
-
+from .compat import json_loads
+from .fn import merge
 from .tar import mkcontext
 
 
-# (container->(str -> None))
-#   -> (container -> stream)
-#   -> [targets]
-#   -> [(container, docker_image_id)]
-def do_build(client, git_rev, targets):
+def do_build(client, build_ref, targets):
     """
     Generic function for building multiple containers while
     notifying a callback function with output produced.
@@ -31,46 +27,35 @@ def do_build(client, git_rev, targets):
 
     """
 
-    return flat_map(build(client, git_rev), targets)
+    for target in targets:
+        for evt in build(client, build_ref, target):
+            yield evt
 
 
-@curry
-def build(client, git_rev, container):
+def build(client, build_ref, container):
     """
-    builds the given container tagged with <git_rev> and ensures that
+    builds the given container tagged with <build_ref> and ensures that
     it depends on it's parent if it's part of this build group (shares
     the same namespace)
     """
 
-    return fn.fmap(
-        compose(
-            merge(dict(event="build_msg", container=container, rev=git_rev)),
-            json.loads
-        ),
-        client.build(
-            fileobj=mkcontext(git_rev, container.dir_path),
-            rm=True,
-            custom_context=True,
-            stream=True,
-            tag='{0}:{1}'.format(container.name, git_rev)
-        )
+    merge_config = {
+        'event': 'build_msg',
+        'container': container,
+        'rev': build_ref,
+    }
+
+    def process_event_(evt):
+        evt_parsed = json_loads(evt)
+        return merge(merge_config, evt_parsed)
+
+    build_evts = client.build(
+        fileobj=mkcontext(build_ref, container.path),
+        rm=True,
+        custom_context=True,
+        stream=True,
+        tag='{0}:{1}'.format(container.name, build_ref),
+        dockerfile=os.path.basename(container.path),
     )
 
-
-@fn.composed(maybe(fn._0), fn.search(r'^Successfully built ([a-f0-9]+)\s*$'))
-def success(line):
-    """
-    >>> success('Blah')
-    >>> success('Successfully built 1234\\n')
-    '1234'
-    """
-
-
-@fn.composed(fn.first, fn.filter(None), fn.map(success))
-def success_from_stream(stream):
-    """
-
-    >>> stream = iter(('Blah', 'Successfully built 1234\\n'))
-    >>> success_from_stream(stream)
-    '1234'
-    """
+    return (process_event_(evt) for evt in build_evts)

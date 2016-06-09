@@ -1,44 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Shipwright -- Builds shared Docker images within a common git repository.
-
-
-Usage:
-  shipwright [options] [build|push [--no-build]|purge]
-             [TARGET]...
-             [-d TARGET]...
-             [-e TARGET]...
-             [-u TARGET]...
-             [-x TARGET]...
-
-
-Options:
-
- --help               Show all help information
-
- --dump-file=FILE     Save raw events to json to FILE. Useful for
-                      debugging.
-
- -H DOCKER_HOST       Override DOCKER_HOST if it's set in the environment.
-
- --x-assert-hostname  Disable strict hostchecking, useful for boot2docker.
-
-
-
-
-Specifiers:
-
-  -d --dependents=TARGET  Build TARGET and all its dependents
-
-  -e --exact=TARGET       Build TARGET only - may fail if
-                          dependencies have not been built
-
-  -u --upto=TARGET        Build TARGET and it dependencies
-
-  -x --exclude=TARGET     Build everything but TARGET and
-                          its dependents
-
-
 Environment Variables:
 
   SW_NAMESPACE : If DOCKER_HUB_ACCOUNT is not passed on the command line
@@ -62,137 +23,235 @@ Examples:
 
   Build everything:
 
-    $ shipwright
+    $ shipwright build
 
   Build base, shared and service1:
 
-    $ shipwright service1
+    $ shipwright build -u service1
 
   Build base, shared and service1, service2:
 
-    $ shipwright -d service1
+    $ shipwright build -d service1
 
   Use exclude to build base, shared and service1, service2:
 
-    $ shipwright -x service3 -x independent
+    $ shipwright build -x service3 -x independent
 
   Build base, independent, shared and service3
 
-    $ shipwright -x service1
+    $ shipwright build -x service1
 
   Build base, independent, shared and service1, service2:
 
-    $ shipwright -d service1 -u independent
+    $ shipwright build -d service1 -u independent
 
   Note that specfying a TARGET is the same as -u so the following
   command is equivalent to the one above.
 
-  $ shipwright -d service1 independent
+  $ shipwright build -d service1 independent
 
 
 """
-from __future__ import absolute_import
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
-
-import sys
-import os
+import argparse
+import functools
 import json
-from itertools import cycle, chain
+import os
+import sys
+from itertools import chain, cycle
 
-from docopt import docopt
 import docker
 from docker.utils import kwargs_from_env
 
-import git
-
-from shipwright import Shipwright
-from shipwright.version import version
-
-
-from shipwright.dependencies import dependents, exact, exclude, upto
+from shipwright import source_control
+from shipwright.base import Shipwright
 from shipwright.colors import rainbow
-from shipwright.fn import _0
-from shipwright import fn
+from shipwright.dependencies import dependents, exact, exclude, upto
+
+
+def argparser():
+    def a_arg(parser, *args, **kwargs):
+        default = kwargs.pop('default', [])
+        parser.add_argument(
+            *args,
+            action='append',
+            nargs='*',
+            default=default,
+            **kwargs
+        )
+
+    desc = 'Builds shared Docker images within a common repository'
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument(
+        '-H', '--docker-host',
+        help="Override DOCKER_HOST if it's set in the environment.",
+    )
+    parser.add_argument(
+        '--dump-file',
+        help='Save raw events to json to FILE, Useful for debugging',
+        type=argparse.FileType('w'),
+    )
+    parser.add_argument(
+        '--x-assert-hostname',
+        action='store_true',
+        help='Disable strict hostchecking, useful for boot2docker.',
+    )
+    parser.add_argument(
+        '--account',
+        help="Override SW_NAMESPACE if it's set in the environment.",
+    )
+
+    subparsers = parser.add_subparsers(help='sub-command help', dest='command')
+    subparsers.required = True
+
+    common = argparse.ArgumentParser(add_help=False)
+    a_arg(
+        common, '-d', '--dependants',
+        help='Build DEPENDANTS and all its dependants',
+    )
+    a_arg(
+        common, '-e', '--exact',
+        help='Build EXACT only - may fail if dependencies have not been built',
+    )
+    a_arg(
+        common, '-u', '--upto',
+        help='Build UPTO and it dependencies',
+    )
+    a_arg(
+        common, '-x', '--exclude',
+        help=' Build everything but EXCLUDE and its dependents',
+    )
+    a_arg(
+        common, '-t', '--tag',
+        dest='tags',
+        help='extra tags to apply to the images',
+    )
+
+    subparsers.add_parser(
+        'build', help='builds containers', parents=[common],
+    )
+    push = subparsers.add_parser(
+        'push', help='pushes built containers', parents=[common],
+    )
+    push.add_argument('--no-build', action='store_true')
+
+    return parser
+
+
+def _flatten(items):
+    return list(chain.from_iterable(items))
+
+
+def old_style_arg_dict(namespace):
+    ns = namespace
+    return {
+        '--account': ns.account,
+        '--dependents': _flatten(ns.dependants),
+        '--dump-file': ns.dump_file,
+        '--exact': _flatten(ns.exact),
+        '--exclude': _flatten(ns.exclude),
+        '--help': False,
+        '--no-build': getattr(ns, 'no_build', False),
+        '--upto': _flatten(ns.upto),
+        '--x-assert-hostname': ns.x_assert_hostname,
+        '-H': ns.docker_host,
+        'TARGET': [],
+        'build': ns.command == 'build',
+        'push': ns.command == 'push',
+        'tags': sorted(set(_flatten(ns.tags))) or ['latest'],
+    }
 
 
 def main():
-    arguments = docopt(
-        __doc__, options_first=False, version='Shipwright ' + version,
+    arguments = old_style_arg_dict(argparser().parse_args())
+    return run(
+        path=os.getcwd(),
+        arguments=arguments,
+        client_cfg=kwargs_from_env(),
+        environ=os.environ,
     )
 
-    repo = git.Repo(os.getcwd())
 
+def process_arguments(path, arguments, client_cfg, environ):
     try:
         config = json.load(open(
-            os.path.join(repo.working_dir, '.shipwright.json')
+            os.path.join(path, '.shipwright.json'),
         ))
-    except OSError:
+    except IOError:
         config = {
             'namespace': (
-                arguments['DOCKER_HUB_ACCOUNT'] or
-                os.environ.get('SW_NAMESPACE')
-            )
+                arguments['--account'] or
+                environ.get('SW_NAMESPACE')
+            ),
         }
-
     if config['namespace'] is None:
         exit(
-            "Please specify your docker hub account in\n"
-            "the .shipwright.json config file,\n "
-            "the command line or set SW_NAMESPACE.\n"
-            "Run shipwright --help for more information."
+            'Please specify your docker hub account in\n'
+            'the .shipwright.json config file,\n '
+            'the command line or set SW_NAMESPACE.\n'
+            'Run shipwright --help for more information.',
         )
-
     assert_hostname = config.get('assert_hostname')
-
     if arguments['--x-assert-hostname']:
         assert_hostname = not arguments['--x-assert-hostname']
 
-    client_cfg = kwargs_from_env()
-    fn.maybe(
-        fn.setattr('assert_hostname', assert_hostname),
-        client_cfg.get('tls')
-    )
+    tls_config = client_cfg.get('tls')
+    if tls_config is not None:
+        tls_config.assert_hostname = assert_hostname
 
     client = docker.Client(version='1.18', **client_cfg)
-    commands = ['build', 'push', 'purge']
-    # {'publish': false, 'purge': true, ...} = 'purge'
-    command_name = _0([
-        c for c in commands
-        if arguments[c]
-    ]) or "build"
-
-    command = getattr(Shipwright(config, repo, client), command_name)
+    commands = ['build', 'push']
+    command_names = [c for c in commands if arguments[c]]
+    command_name = command_names[0] if command_names else 'build'
+    pt = functools.partial
 
     args = [chain(
-        map(exact, arguments.pop('--exact')),
-        map(dependents, arguments.pop('--dependents')),
-        map(exclude, arguments.pop('--exclude')),
-        map(upto, arguments.pop('--upto')),
-        map(upto, arguments.pop('TARGET'))
+        [pt(exact, target) for target in arguments.pop('--exact')],
+        [pt(dependents, target) for target in arguments.pop('--dependents')],
+        [pt(exclude, target) for target in arguments.pop('--exclude')],
+        [pt(upto, target) for target in arguments.pop('--upto')],
+        [pt(upto, target) for target in arguments.pop('TARGET')],
     )]
-
     if command_name == 'push':
         args.append(not arguments.pop('--no-build'))
-
+    dump_file = None
     if arguments['--dump-file']:
         dump_file = open(arguments['--dump-file'], 'w')
-        writer = fn.compose(
-            switch,
-            fn.tap(streamout(dump_file))
-        )
-    else:
-        writer = switch
+
+    return args, command_name, dump_file, config, client
+
+
+def run(path, arguments, client_cfg, environ):
+    args, command_name, dump_file, config, client = process_arguments(
+        path, arguments, client_cfg, environ,
+    )
+    namespace = config['namespace']
+    name_map = config.get('names', {})
+    scm = source_control.GitSourceControl(path, namespace, name_map)
+    sw = Shipwright(scm, client, arguments['tags'])
+    command = getattr(sw, command_name)
+
+    show_progress = sys.stdout.isatty()
+
+    errors = []
 
     for event in command(*args):
-        show_fn = mk_show(event)
-        show_fn(writer(event))
+        if dump_file:
+            dump_file.write(json.dumps(event))
+            dump_file.write('\n')
+        if 'error' in event:
+            errors.append(event)
+        msg = pretty_event(event, show_progress)
+        if msg is not None:
+            print(msg)
 
-
-@fn.curry
-def streamout(f, event):
-    f.write(json.dumps(event))
-    f.write('\n')
+    if errors:
+        print('The following errors occurred:', file=sys.stdout)
+        messages = [pretty_event(error, True) for error in errors]
+        for msg in sorted(m for m in messages if m is not None):
+            print(msg, file=sys.stdout)
+        sys.exit(1)
 
 
 def exit(msg):
@@ -208,15 +267,24 @@ def memo(f, arg, memos={}):
         return memos[arg]
 
 
-def mk_show(evt):
-    if evt['event'] in ('build_msg', 'push') or 'error' in evt:
-        return memo(
-            highlight,
-            fn.maybe(fn.getattr('name'),
-                     evt.get('container')) or evt.get('image'),
-        )
+def pretty_event(evt, show_progress):
+    formatted_message = switch(evt, show_progress)
+    if formatted_message is None:
+        return
+    if not (evt['event'] in ('build_msg', 'push') or 'error' in evt):
+        return formatted_message
+
+    name = None
+    container = evt.get('container')
+    if container is not None:
+        name = container.name
     else:
-        return print
+        name = evt.get('image')
+    prettify = memo(
+        highlight,
+        name,
+    )
+    return prettify(formatted_message)
 
 colors = cycle(rainbow())
 
@@ -225,34 +293,42 @@ def highlight(name):
     color_fn = next(colors)
 
     def highlight_(msg):
-        print(color_fn(name) + " | " + msg)
+        return color_fn(name) + ' | ' + msg
     return highlight_
 
 
-def switch(rec):
+def switch(rec, show_progress):
 
     if 'stream' in rec:
         return rec['stream'].strip('\n')
 
     elif 'status' in rec:
-        if rec['status'].startswith('Downloading'):
-            term = '\r'
-        else:
-            term = ''
-
-        return '[STATUS] {0}: {1}{2}'.format(
+        status = '[STATUS] {0}: {1}'.format(
             rec.get('id', ''),
             rec['status'],
-            term
         )
+
+        progress = rec.get('progressDetail')
+        if progress:
+            if show_progress:
+                return '{status} {p[current]}/{p[total]}\r'.format(
+                    status=status,
+                    p=progress,
+                )
+            return None
+        return status
+
     elif 'error' in rec:
-        return '[ERROR] {0}\n'.format(rec['errorDetail']['message'])
+        return '[ERROR] {0}'.format(rec['errorDetail']['message'])
     elif rec['event'] == 'tag':
-        return 'Tagging {rec.image} to {name}:{rec.tag}'.format(
+        return 'Tagging {image} to {name}:{tag}'.format(
             name=rec['container'].name,
-            rec=rec,
+            image=rec['image'],
+            tag=rec['tag'],
         )
     elif rec['event'] == 'removed':
         return 'Untagging {image}:{tag}'.format(**rec)
+    elif rec['event'] == 'push' and 'aux' in rec:
+        return None
     else:
         return json.dumps(rec)
