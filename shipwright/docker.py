@@ -28,17 +28,13 @@ def last_built_from_docker(client, name):
     return list([x for i in images for x in key_from_image_info(i)])
 
 
-def tags_from_containers(client, containers):
-    return [last_built_from_docker(client, c.name) for c in containers]
-
-
 def encode_tag(tag):
     return tag.replace('/', '-')
 
 
 def tag_container(client, container, new_ref):
     tag = encode_tag(new_ref)
-    image = container.name + ':' + container.last_built_ref
+    image = container.name + ':' + container.ref
     evt = {
         'event': 'tag',
         'container': container,

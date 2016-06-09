@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 
-import functools
 import io
 import os
 import re
@@ -10,64 +9,10 @@ from os.path import join
 from docker import utils
 
 
-def bundle_docker_dir(modify_docker_func, docker_path):
+def bundle_docker_dir(tag, docker_path):
     """
     Tars up a directory using the normal docker.util.tar method but
-    first relpaces the contents of the Dockerfile found at path with
-    the result of calling modify_docker_func with a string containing
-    the complete contents of the docker file.
-
-
-    For example to prepend the phrase "bogus header"  to a dockerfile
-    we first create a function that takes the contents of the current
-    dockerfile as it's contents.
-
-    >>> def append_bogus(docker_content):
-    ...   return "bogus header " + docker_content
-
-    Then we can tar it up.. but first we'll need some test content.
-    These routines create a  temporary directory containing the following
-    3 files.
-
-    ./Dockerfile
-    ./bogus1
-    ./bogus2
-
-    >>> test_root = getfixture('tmpdir').mkdir('tar')
-    >>> docker_path = test_root.join('Dockerfile')
-    >>> docker_path.write(u'blah')
-
-    >>> test_root.join('bogus1').write('hi mom')
-    >>> test_root.join('bogus2').write('hello world')
-
-
-    Now we can call bundle_docker_dir passing it our append_bogus function to
-    mutate the docker contents. We'll receive a file like object which
-    is stream of the contents encoded as a  tar file (the format Docker
-    build expects)
-
-    >>> fileobj = bundle_docker_dir(append_bogus, str(docker_path))
-
-    Normally we'd just pass this directly to the docker build command
-    but for the purpose of this test, we'll use tarfile to decode the string
-    and ensure that our mutation happened as planned.
-
-
-    First lets ensure that our tarfile contains our test files
-
-    >>> t = tarfile.open(fileobj=fileobj)
-    >>> t.getnames()  # doctest: +SKIP
-    ['bogus1', 'bogus2', 'Dockerfile']
-
-    And if we exctart the Dockerfile it starts with 'bogus header'
-
-    >>> ti = t.extractfile('Dockerfile')
-    >>> ti.read().startswith(b'bogus header')
-    True
-
-    Obviously a real mutation would ensure that the the contents
-    of the Dockerfile are valid docker commands and not some
-    bogus content.
+    adds tag if it's not None.
     """
 
     # tar up the directory minus the Dockerfile,
@@ -82,18 +27,19 @@ def bundle_docker_dir(modify_docker_func, docker_path):
 
     dockerfile_name = os.path.basename(docker_path)
 
+    if tag is None:
+        return utils.tar(path, ignore, dockerfile=dockerfile_name)
+
     # docker-py 1.6+ won't ignore the dockerfile
     # passing dockerfile='' works around the issuen
     # and lets us add the modified file when we're done.
     ignore.append(dockerfile_name)
     fileobj = utils.tar(path, ignore, dockerfile='')
 
-    # append a dockerfile after running it through a mutation
-    # function first
     t = tarfile.open(fileobj=fileobj, mode='a')
     dfinfo = tarfile.TarInfo(dockerfile_name)
 
-    contents = modify_docker_func(open(join(path, dockerfile_name)).read())
+    contents = tag_parent(tag, open(join(path, dockerfile_name)).read())
     if not isinstance(contents, bytes):
         contents = contents.encode('utf8')
     dockerfile = io.BytesIO(contents)
@@ -182,6 +128,6 @@ def mkcontext(tag, docker_path):
     """
 
     return bundle_docker_dir(
-        functools.partial(tag_parent, tag),
+        tag,
         docker_path,
     )
