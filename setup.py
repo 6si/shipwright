@@ -26,7 +26,6 @@ setup(
     author='Scott Robertson',
     tests_require=['nose'],
     install_requires=[
-        'zipper>=0.0.3, <0.1.0',
         'docker-py>=1.8.1, <2.0.0',
         'GitPython>=2.0.5, <3.0.0',
     ],
