@@ -4,9 +4,7 @@ import functools
 import operator
 from collections import namedtuple
 
-import zipper
-
-from . import fn
+from . import fn, zipper
 
 
 def union(inclusions, tree):
