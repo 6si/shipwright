@@ -55,7 +55,6 @@ Examples:
 from __future__ import absolute_import, print_function
 
 import argparse
-import functools
 import json
 import os
 import sys
@@ -67,7 +66,6 @@ from docker.utils import kwargs_from_env
 from shipwright import source_control
 from shipwright.base import Shipwright
 from shipwright.colors import rainbow
-from shipwright.dependencies import dependents, exact, exclude, upto
 
 
 def argparser():
@@ -204,28 +202,29 @@ def process_arguments(path, arguments, client_cfg, environ):
     commands = ['build', 'push']
     command_names = [c for c in commands if arguments[c]]
     command_name = command_names[0] if command_names else 'build'
-    pt = functools.partial
 
-    args = [chain(
-        [pt(exact, target) for target in arguments.pop('--exact')],
-        [pt(dependents, target) for target in arguments.pop('--dependents')],
-        [pt(exclude, target) for target in arguments.pop('--exclude')],
-        [pt(upto, target) for target in arguments.pop('--upto')],
-        [pt(upto, target) for target in arguments.pop('TARGET')],
-    )]
+    build_targets = {
+        'exact': arguments['--exact'],
+        'dependents': arguments['--dependents'],
+        'exclude': arguments['--exclude'],
+        'upto': arguments['--upto'],
+    }
+
+    no_build = False
     if command_name == 'push':
-        args.append(not arguments.pop('--no-build'))
+        no_build = arguments['--no-build']
     dump_file = None
     if arguments['--dump-file']:
         dump_file = open(arguments['--dump-file'], 'w')
 
-    return args, command_name, dump_file, config, client
+    return build_targets, no_build, command_name, dump_file, config, client
 
 
 def run(path, arguments, client_cfg, environ):
-    args, command_name, dump_file, config, client = process_arguments(
+    args = process_arguments(
         path, arguments, client_cfg, environ,
     )
+    build_targets, no_build, command_name, dump_file, config, client = args
     namespace = config['namespace']
     name_map = config.get('names', {})
     scm = source_control.GitSourceControl(path, namespace, name_map)
@@ -236,7 +235,12 @@ def run(path, arguments, client_cfg, environ):
 
     errors = []
 
-    for event in command(*args):
+    if no_build:
+        events = command(build_targets, no_build)
+    else:
+        events = command(build_targets)
+
+    for event in events:
         if dump_file:
             dump_file.write(json.dumps(event))
             dump_file.write('\n')
