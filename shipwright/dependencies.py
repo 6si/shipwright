@@ -1,13 +1,30 @@
 from __future__ import absolute_import
 
 import functools
+import itertools
 import operator
 from collections import namedtuple
 
-from . import fn, zipper
+from . import zipper
 
 
-def union(inclusions, tree):
+def _compose(*fns):
+    """
+    Given a list of functions such as f, g, h, that each take a single value
+    return a function that is equivalent of f(g(h(v)))
+    """
+
+    ordered = list(reversed(fns))
+
+    def apply_(v, f):
+        return f(v)
+
+    def compose_(v):
+        return functools.reduce(apply_, ordered, v)
+    return compose_
+
+
+def _union(inclusions, tree):
     targets = functools.reduce(
         # for each tree func run it, convert to set
         lambda p, f: p | set(f(tree)),
@@ -15,11 +32,11 @@ def union(inclusions, tree):
         set(),
     )
 
-    return make_tree(targets)
+    return _make_tree(targets)
 
 
 # [(tree -> [ImageNames])] -> [Containers]
-def eval(specifiers, targets):
+def eval(build_targets, targets):
     """
     Given a list of partially applied functions that
     take a tree and return a list of image names.
@@ -34,20 +51,30 @@ def eval(specifiers, targets):
     inclusions = []
     exclusions = []
 
+    pt = functools.partial
+    bt = build_targets
+
+    specifiers = itertools.chain(
+        (pt(_exact, target) for target in bt['exact']),
+        (pt(_dependents, target) for target in bt['dependents']),
+        (pt(_exclude, target) for target in bt['exclude']),
+        (pt(_upto, target) for target in bt['upto']),
+    )
+
     for spec in specifiers:
-        if spec.func == exclude:
+        if spec.func == _exclude:
             exclusions.append(spec)
         else:
             inclusions.append(spec)
 
-    tree = make_tree(targets)
+    tree = _make_tree(targets)
     if inclusions:
-        tree = union(inclusions, tree)
+        tree = _union(inclusions, tree)
 
-    return fn.compose(*exclusions)(tree)
+    return _brood(_compose(*exclusions)(tree))
 
 
-Root = namedtuple('Root', ['name', 'short_name', 'children'])
+_Root = namedtuple('_Root', ['name', 'short_name', 'children'])
 
 
 def _find(tree, name):
@@ -58,14 +85,14 @@ def _find(tree, name):
     return tree.find(find_)
 
 
-def make_tree(containers):
+def _make_tree(containers):
     """
     Converts a list of containers into a tree represented by a zipper.
     see http://en.wikipedia.org/wiki/Zipper_(data_structure)
 
     >>> from .dependencies import targets
 
-    >>> root = make_tree(targets)
+    >>> root = _make_tree(targets)
     >>> root.node().name is None # doctest: +ELLIPSIS
     True
 
@@ -91,20 +118,20 @@ def make_tree(containers):
 
     """
 
-    root = Root(None, None, ())
-    tree = zipper.zipper(root, is_branch, children, make_node)
+    root = _Root(None, None, ())
+    tree = zipper.zipper(root, _is_branch, _children, _make_node)
 
     for c in containers:
 
         def is_child(target):
-            if not isinstance(target, Root):
+            if not isinstance(target, _Root):
                 return target.parent == c.name
 
-        branch_children, root_children = split(is_child, tree.children())
+        branch_children, root_children = _split(is_child, tree.children())
         t = c._replace(children=tuple(branch_children))
 
         if branch_children:
-            tree = tree.edit(replace, tuple(root_children))
+            tree = tree.edit(_replace, tuple(root_children))
 
         loc = _find(tree, t.parent)
         if loc:
@@ -115,34 +142,34 @@ def make_tree(containers):
     return tree
 
 
-def replace(node, children):
+def _replace(node, children):
     return node._replace(children=children)
 
 
-def children(item):
+def _children(item):
     return item.children
 
 
-def is_branch(item):
+def _is_branch(item):
     return True
 
 
-def make_node(node, children):
+def _make_node(node, children):
     # keep children sorted to make testing easier
     ch = tuple(sorted(children, key=operator.attrgetter('name')))
     return node._replace(children=ch)
 
 
-def breadth_first_iter(loc):
+def _breadth_first_iter(loc):
     """
     Given a loctation node (from a zipper) walk it's children in breadth first
     order.
 
     >>> from .dependencies import targets
 
-    >>> tree = make_tree(targets)
+    >>> tree = _make_tree(targets)
 
-    >>> result = [loc.node().name for loc in breadth_first_iter(tree)]
+    >>> result = [loc.node().name for loc in _breadth_first_iter(tree)]
     >>> result  # doctest: +NORMALIZE_WHITESPACE
     [None, 'shipwright_test/1', 'shipwright_test/independent',
     'shipwright_test/2', 'shipwright_test/3']
@@ -160,7 +187,7 @@ def breadth_first_iter(loc):
 
 
 # Loc -> [Target]
-def lineage(loc):
+def _lineage(loc):
     results = []
     while loc.path:
         node = loc.node()
@@ -170,7 +197,7 @@ def lineage(loc):
 
 
 # (a -> Bool) -> [a] ->[a], [a]
-def split(f, children):
+def _split(f, children):
     """
     Given a function that returns true or false and a list. Return
     a two lists all items f(child) == True is in list 1 and
@@ -189,50 +216,50 @@ def split(f, children):
 
 
 # Loc -> [Target]
-def brood(loc):
-    return [loc.node() for loc in breadth_first_iter(loc)][1:]
+def _brood(loc):
+    return [loc.node() for loc in _breadth_first_iter(loc)][1:]
 
 
 # Target -> Tree -> [Target]
-def upto(target, tree):
+def _upto(target, tree):
     """
     returns target and everything it depends on
 
     >>> from .dependencies import targets
-    >>> targets = upto('shipwright_test/2', make_tree(targets))
+    >>> targets = _upto('shipwright_test/2', _make_tree(targets))
     >>> _names_list(targets)
     ['shipwright_test/1', 'shipwright_test/2']
     """
 
     loc = _find(tree, target)
 
-    return lineage(loc)  # make_tree(lineage(loc))
+    return _lineage(loc)  # _make_tree(lineage(loc))
 
 
 # Target -> Tree -> [Target]
-def dependents(target, tree):
+def _dependents(target, tree):
     """
     Returns a target it's dependencies and
     everything that depends on it
 
     >>> from .dependencies import targets
-    >>> targets = dependents('shipwright_test/2', make_tree(targets))
+    >>> targets = _dependents('shipwright_test/2', _make_tree(targets))
     >>> _names_list(targets)
     ['shipwright_test/1', 'shipwright_test/2', 'shipwright_test/3']
     """
 
     loc = _find(tree, target)
 
-    return lineage(loc) + brood(loc)
+    return _lineage(loc) + _brood(loc)
 
 
 # Target -> Tree -> [Target]
-def exact(target, tree):
+def _exact(target, tree):
     """
     Returns only the target.
 
     >>> from .dependencies import targets
-    >>> targets = exact('shipwright_test/2', make_tree(targets))
+    >>> targets = _exact('shipwright_test/2', _make_tree(targets))
     >>> _names_list(targets)
     ['shipwright_test/2']
 
@@ -244,13 +271,13 @@ def exact(target, tree):
 
 
 # Target -> Tree -> Tree
-def exclude(target, tree):
+def _exclude(target, tree):
     """
     Returns everything but the target and it's dependents. If target
     is not found the whole tree is returned.
 
     >>> from .dependencies import targets
-    >>> tree = exclude('shipwright_test/2', make_tree(targets))
+    >>> tree = _exclude('shipwright_test/2', _make_tree(targets))
     >>> _names(tree) # doctest: +ELLIPSIS
     ['shipwright_test/1', 'shipwright_test/independent']
 
@@ -265,7 +292,7 @@ def exclude(target, tree):
 
 # Test methods ###
 def _names(tree):
-    return [n.name for n in brood(tree)]
+    return [n.name for n in _brood(tree)]
 
 
 def _names_list(targets):

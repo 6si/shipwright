@@ -47,12 +47,11 @@ def test_push_also_builds(tmpdir):
     create_repo(path)
     in_args = get_defaults()
     in_args['push'] = True
-    args, _, _, _, _ = cli.process_arguments(
+    _, no_build, _, _, _, _ = cli.process_arguments(
         path, in_args, client_cfg={},
         environ={'SW_NAMESPACE': 'eg'},
     )
-    specifiers, build = args
-    assert build
+    assert not no_build
 
 
 def test_assert_hostname(tmpdir):
@@ -61,7 +60,7 @@ def test_assert_hostname(tmpdir):
     args = get_defaults()
     args['--x-assert-hostname'] = True
     tls_config = tls.TLSConfig()
-    _, _, _, _, client = cli.process_arguments(
+    _, _, _, _, _, client = cli.process_arguments(
         path, args,
         client_cfg={
             'base_url': 'https://example.com:443/api/v1/',

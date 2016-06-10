@@ -4,8 +4,13 @@ import os
 
 from . import docker
 from .compat import json_loads
-from .fn import merge
 from .tar import mkcontext
+
+
+def _merge(d1, d2):
+    d = d1.copy()
+    d.update(d2)
+    return d
 
 
 def do_build(client, build_ref, targets):
@@ -53,7 +58,7 @@ def build(client, parent_ref, container):
 
     def process_event_(evt):
         evt_parsed = json_loads(evt)
-        return merge(merge_config, evt_parsed)
+        return _merge(merge_config, evt_parsed)
 
     built_tags = docker.last_built_from_docker(client, container.name)
     if container.ref in built_tags:

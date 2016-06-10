@@ -3,6 +3,7 @@
 
 - Isolate all git functionality, so as to create pluggable Source Control wrappers.
 - More efficient required build detection. (`Issue #63 <https://github.com/6si/shipwright/pull/63>`_)
+- Isolate all zipper usage, vendor zipper library.
 
 0.2.2 (2015-01-07)
 ------------------
