@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import os
 
+from . import docker
 from .compat import json_loads
 from .fn import merge
 from .tar import mkcontext
@@ -27,12 +28,17 @@ def do_build(client, build_ref, targets):
 
     """
 
+    build_index = {t.container.name: t.ref for t in targets}
+
     for target in targets:
-        for evt in build(client, build_ref, target):
+        parent_ref = None
+        if target.parent:
+            parent_ref = build_index.get(target.parent)
+        for evt in build(client, parent_ref, target):
             yield evt
 
 
-def build(client, build_ref, container):
+def build(client, parent_ref, container):
     """
     builds the given container tagged with <build_ref> and ensures that
     it depends on it's parent if it's part of this build group (shares
@@ -42,19 +48,23 @@ def build(client, build_ref, container):
     merge_config = {
         'event': 'build_msg',
         'container': container,
-        'rev': build_ref,
+        'rev': container.ref,
     }
 
     def process_event_(evt):
         evt_parsed = json_loads(evt)
         return merge(merge_config, evt_parsed)
 
+    built_tags = docker.last_built_from_docker(client, container.name)
+    if container.ref in built_tags:
+        return []
+
     build_evts = client.build(
-        fileobj=mkcontext(build_ref, container.path),
+        fileobj=mkcontext(parent_ref, container.path),
         rm=True,
         custom_context=True,
         stream=True,
-        tag='{0}:{1}'.format(container.name, build_ref),
+        tag='{0}:{1}'.format(container.name, container.ref),
         dockerfile=os.path.basename(container.path),
     )
 
