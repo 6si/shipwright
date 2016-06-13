@@ -1,4 +1,4 @@
-0.3.3 (unreleased)
+0.4.0 (2016-06-13)
 ------------------
 
 - Isolate all git functionality, so as to create pluggable Source Control wrappers.
