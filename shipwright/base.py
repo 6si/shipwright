@@ -12,9 +12,8 @@ class Shipwright(object):
     def targets(self):
         return self.source_control.targets()
 
-    def build(self, specifiers):
-        tree = dependencies.eval(specifiers, self.targets())
-        targets = dependencies.brood(tree)
+    def build(self, build_targets):
+        targets = dependencies.eval(build_targets, self.targets())
         this_ref_str = self.source_control.this_ref_str()
         return self._build(this_ref_str, targets)
 
@@ -35,15 +34,14 @@ class Shipwright(object):
                     tag,
                 )
 
-    def push(self, specifiers, build=True):
+    def push(self, build_targets, no_build=False):
         """
         Pushes the latest images to the repository.
         """
-        tree = dependencies.eval(specifiers, self.targets())
-        targets = dependencies.brood(tree)
+        targets = dependencies.eval(build_targets, self.targets())
         this_ref_str = self.source_control.this_ref_str()
 
-        if build:
+        if not no_build:
             for evt in self.build_tree(this_ref_str, targets):
                 yield evt
 
