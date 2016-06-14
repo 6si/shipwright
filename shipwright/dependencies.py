@@ -1,18 +1,9 @@
 from __future__ import absolute_import
 
-import functools
 import operator
 from collections import namedtuple
 
 from . import zipper
-
-
-def _union(inclusions, tree):
-    base = set()
-    for inclusion in inclusions:
-        base = base | set(inclusion(tree))
-
-    return _make_tree(base)
 
 
 # [(tree -> [ImageNames])] -> [Containers]
@@ -28,17 +19,20 @@ def eval(build_targets, targets):
     in order.
 
     """
-    pt = functools.partial
+    tree = _make_tree(targets)
     bt = build_targets
 
-    inclusions = (
-        [pt(_exact, target) for target in bt['exact']] +
-        [pt(_dependents, target) for target in bt['dependents']] +
-        [pt(_upto, target) for target in bt['upto']]
-    )
-    tree = _make_tree(targets)
-    if inclusions:
-        tree = _union(inclusions, tree)
+    exact, dependents, upto = bt['exact'], bt['dependents'], bt['upto']
+    if exact or dependents or upto:
+        base = set()
+        for target in exact:
+            base = base | set(_exact(target, tree))
+        for target in dependents:
+            base = base | set(_dependents(target, tree))
+        for target in upto:
+            base = base | set(_upto(target, tree))
+
+        tree = _make_tree(base)
 
     for target in bt['exclude']:
         tree = _exclude(target, tree)
