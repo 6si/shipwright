@@ -8,14 +8,11 @@ from . import zipper
 
 
 def _union(inclusions, tree):
-    targets = functools.reduce(
-        # for each tree func run it, convert to set
-        lambda p, f: p | set(f(tree)),
-        inclusions,
-        set(),
-    )
+    base = set()
+    for inclusion in inclusions:
+        base = base | set(inclusion(tree))
 
-    return _make_tree(targets)
+    return _make_tree(base)
 
 
 # [(tree -> [ImageNames])] -> [Containers]
