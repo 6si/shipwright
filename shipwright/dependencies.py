@@ -7,22 +7,6 @@ from collections import namedtuple
 from . import zipper
 
 
-def _compose(*fns):
-    """
-    Given a list of functions such as f, g, h, that each take a single value
-    return a function that is equivalent of f(g(h(v)))
-    """
-
-    ordered = list(reversed(fns))
-
-    def apply_(v, f):
-        return f(v)
-
-    def compose_(v):
-        return functools.reduce(apply_, ordered, v)
-    return compose_
-
-
 def _union(inclusions, tree):
     targets = functools.reduce(
         # for each tree func run it, convert to set
@@ -55,13 +39,14 @@ def eval(build_targets, targets):
         [pt(_dependents, target) for target in bt['dependents']] +
         [pt(_upto, target) for target in bt['upto']]
     )
-    exclusions = [pt(_exclude, target) for target in bt['exclude']]
-
     tree = _make_tree(targets)
     if inclusions:
         tree = _union(inclusions, tree)
 
-    return _brood(_compose(*exclusions)(tree))
+    for target in bt['exclude']:
+        tree = _exclude(target, tree)
+
+    return _brood(tree)
 
 
 _Root = namedtuple('_Root', ['name', 'short_name', 'children'])
