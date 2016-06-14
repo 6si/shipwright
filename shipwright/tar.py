@@ -8,6 +8,14 @@ from os.path import join
 
 from docker import utils
 
+RE_DOCKER_TAG = re.compile(
+    r'^(?P<from>\s*from\s+)'
+    r'(?P<registry>[\w.-]+(?P<port>:\d+)?(?P<path>([\w.-]+/)+|/))?'
+    r'(?P<name>[\w.-]+)'
+    r'(?P<whitespace>(\s*))$',
+    flags=re.MULTILINE | re.IGNORECASE,
+)
+
 
 def bundle_docker_dir(tag, docker_path):
     """
@@ -95,6 +103,20 @@ def tag_parent(tag, docker_content):
     ...     "blah",
     ...     "# comment\n"
     ...     "author bob barker\n"
+    ...     "FroM localhost:5000/somerepoimage\n\n"
+    ...     "RUN echo hi mom\n"
+    ... ))
+    # comment
+    author bob barker
+    FroM localhost:5000/somerepoimage:blah
+    <BLANKLINE>
+    RUN echo hi mom
+    <BLANKLINE>
+
+    >>> print(tag_parent(
+    ...     "blah",
+    ...     "# comment\n"
+    ...     "author bob barker\n"
     ...     "FroM docker.example.com:5000/somerepo/image\n\n"
     ...     "RUN echo hi mom\n",
     ... ))
@@ -106,14 +128,10 @@ def tag_parent(tag, docker_content):
     <BLANKLINE>
     """
 
-    v = re.sub(
-        '^(\s*from\s+)(([\w.-]+(\:\d+)?\/)?[\w.-]+/[\w.-]+)(\s*)$',
-        '\\1\\2:' + tag + '\\5',
+    return RE_DOCKER_TAG.sub(
+        r'\g<from>\g<registry>\g<name>:{tag}\g<whitespace>'.format(tag=tag),
         docker_content,
-        flags=re.MULTILINE + re.I,
     )
-
-    return v
 
 
 # str -> str -> fileobj
