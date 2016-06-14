@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import functools
-import itertools
 import operator
 from collections import namedtuple
 
@@ -48,24 +47,15 @@ def eval(build_targets, targets):
     in order.
 
     """
-    inclusions = []
-    exclusions = []
-
     pt = functools.partial
     bt = build_targets
 
-    specifiers = itertools.chain(
-        (pt(_exact, target) for target in bt['exact']),
-        (pt(_dependents, target) for target in bt['dependents']),
-        (pt(_exclude, target) for target in bt['exclude']),
-        (pt(_upto, target) for target in bt['upto']),
+    inclusions = (
+        [pt(_exact, target) for target in bt['exact']] +
+        [pt(_dependents, target) for target in bt['dependents']] +
+        [pt(_upto, target) for target in bt['upto']]
     )
-
-    for spec in specifiers:
-        if spec.func == _exclude:
-            exclusions.append(spec)
-        else:
-            inclusions.append(spec)
+    exclusions = [pt(_exclude, target) for target in bt['exclude']]
 
     tree = _make_tree(targets)
     if inclusions:
