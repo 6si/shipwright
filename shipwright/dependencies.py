@@ -1,38 +1,9 @@
 from __future__ import absolute_import
 
-import functools
-import itertools
 import operator
 from collections import namedtuple
 
 from . import zipper
-
-
-def _compose(*fns):
-    """
-    Given a list of functions such as f, g, h, that each take a single value
-    return a function that is equivalent of f(g(h(v)))
-    """
-
-    ordered = list(reversed(fns))
-
-    def apply_(v, f):
-        return f(v)
-
-    def compose_(v):
-        return functools.reduce(apply_, ordered, v)
-    return compose_
-
-
-def _union(inclusions, tree):
-    targets = functools.reduce(
-        # for each tree func run it, convert to set
-        lambda p, f: p | set(f(tree)),
-        inclusions,
-        set(),
-    )
-
-    return _make_tree(targets)
 
 
 # [(tree -> [ImageNames])] -> [Containers]
@@ -48,30 +19,25 @@ def eval(build_targets, targets):
     in order.
 
     """
-    inclusions = []
-    exclusions = []
-
-    pt = functools.partial
+    tree = _make_tree(targets)
     bt = build_targets
 
-    specifiers = itertools.chain(
-        (pt(_exact, target) for target in bt['exact']),
-        (pt(_dependents, target) for target in bt['dependents']),
-        (pt(_exclude, target) for target in bt['exclude']),
-        (pt(_upto, target) for target in bt['upto']),
-    )
+    exact, dependents, upto = bt['exact'], bt['dependents'], bt['upto']
+    if exact or dependents or upto:
+        base = set()
+        for target in exact:
+            base = base | set(_exact(target, tree))
+        for target in dependents:
+            base = base | set(_dependents(target, tree))
+        for target in upto:
+            base = base | set(_upto(target, tree))
 
-    for spec in specifiers:
-        if spec.func == _exclude:
-            exclusions.append(spec)
-        else:
-            inclusions.append(spec)
+        tree = _make_tree(base)
 
-    tree = _make_tree(targets)
-    if inclusions:
-        tree = _union(inclusions, tree)
+    for target in bt['exclude']:
+        tree = _exclude(target, tree)
 
-    return _brood(_compose(*exclusions)(tree))
+    return _brood(tree)
 
 
 _Root = namedtuple('_Root', ['name', 'short_name', 'children'])
@@ -89,33 +55,6 @@ def _make_tree(containers):
     """
     Converts a list of containers into a tree represented by a zipper.
     see http://en.wikipedia.org/wiki/Zipper_(data_structure)
-
-    >>> from .dependencies import targets
-
-    >>> root = _make_tree(targets)
-    >>> root.node().name is None # doctest: +ELLIPSIS
-    True
-
-    >>> _names(root)  # doctest: +NORMALIZE_WHITESPACE
-    ['shipwright_test/1', 'shipwright_test/independent', 'shipwright_test/2',
-    'shipwright_test/3']
-
-    >>> root.down().node()  # doctest: +ELLIPSIS
-    Target(container=Container(name='shipwright_test/1', ...)
-
-    >>> _names(root.down())  # doctest: +ELLIPSIS
-    ['shipwright_test/2', 'shipwright_test/3']
-
-
-    >>> root.down().down().node()  # doctest: +ELLIPSIS
-    Target(container=Container(name='shipwright_test/2', ...)
-
-    >>> _names(root.down().down())  # doctest: +ELLIPSIS
-    ['shipwright_test/3']
-
-    >>> root.down().right().node().name # doctest: +ELLIPSIS
-    'shipwright_test/independent'
-
     """
 
     root = _Root(None, None, ())
@@ -164,16 +103,6 @@ def _breadth_first_iter(loc):
     """
     Given a loctation node (from a zipper) walk it's children in breadth first
     order.
-
-    >>> from .dependencies import targets
-
-    >>> tree = _make_tree(targets)
-
-    >>> result = [loc.node().name for loc in _breadth_first_iter(tree)]
-    >>> result  # doctest: +NORMALIZE_WHITESPACE
-    [None, 'shipwright_test/1', 'shipwright_test/independent',
-    'shipwright_test/2', 'shipwright_test/3']
-
     """
 
     tocheck = [loc]
@@ -202,7 +131,6 @@ def _split(f, children):
     Given a function that returns true or false and a list. Return
     a two lists all items f(child) == True is in list 1 and
     all items not in the list are in list 2.
-
     """
 
     l1 = []
@@ -222,14 +150,7 @@ def _brood(loc):
 
 # Target -> Tree -> [Target]
 def _upto(target, tree):
-    """
-    returns target and everything it depends on
-
-    >>> from .dependencies import targets
-    >>> targets = _upto('shipwright_test/2', _make_tree(targets))
-    >>> _names_list(targets)
-    ['shipwright_test/1', 'shipwright_test/2']
-    """
+    """Returns target and everything it depends on"""
 
     loc = _find(tree, target)
 
@@ -238,15 +159,7 @@ def _upto(target, tree):
 
 # Target -> Tree -> [Target]
 def _dependents(target, tree):
-    """
-    Returns a target it's dependencies and
-    everything that depends on it
-
-    >>> from .dependencies import targets
-    >>> targets = _dependents('shipwright_test/2', _make_tree(targets))
-    >>> _names_list(targets)
-    ['shipwright_test/1', 'shipwright_test/2', 'shipwright_test/3']
-    """
+    """Returns a target it's dependencies and everything that depends on it"""
 
     loc = _find(tree, target)
 
@@ -255,15 +168,7 @@ def _dependents(target, tree):
 
 # Target -> Tree -> [Target]
 def _exact(target, tree):
-    """
-    Returns only the target.
-
-    >>> from .dependencies import targets
-    >>> targets = _exact('shipwright_test/2', _make_tree(targets))
-    >>> _names_list(targets)
-    ['shipwright_test/2']
-
-    """
+    """Returns only the target."""
 
     loc = _find(tree, target)
 
@@ -275,12 +180,6 @@ def _exclude(target, tree):
     """
     Returns everything but the target and it's dependents. If target
     is not found the whole tree is returned.
-
-    >>> from .dependencies import targets
-    >>> tree = _exclude('shipwright_test/2', _make_tree(targets))
-    >>> _names(tree) # doctest: +ELLIPSIS
-    ['shipwright_test/1', 'shipwright_test/independent']
-
     """
 
     loc = _find(tree, target)
@@ -288,42 +187,3 @@ def _exclude(target, tree):
         return loc.remove().top()
     else:
         return tree
-
-
-# Test methods ###
-def _names(tree):
-    return [n.name for n in _brood(tree)]
-
-
-def _names_list(targets):
-    return sorted([n.name for n in targets])
-
-
-def setup_module(module):
-    from .container import Container
-    from .source_control import Target
-
-    def target(name, dir_path, path, parent):
-        return Target(
-            Container(name, dir_path, path, parent, name),
-            'abc', None,
-        )
-
-    module.targets = [
-        target(
-            'shipwright_test/2', 'path2/', 'path2/Dockerfile',
-            'shipwright_test/1',
-        ),
-        target(
-            'shipwright_test/1', 'path1/', 'path1/Dockerfile',
-            'ubuntu',
-        ),
-        target(
-            'shipwright_test/3', 'path3/', 'path3/Dockerfile',
-            'shipwright_test/2',
-        ),
-        target(
-            'shipwright_test/independent', 'independent',
-            'path1/Dockerfile', 'ubuntu',
-        ),
-    ]
