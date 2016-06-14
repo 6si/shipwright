@@ -42,7 +42,7 @@ class Shipwright(object):
         this_ref_str = self.source_control.this_ref_str()
 
         if not no_build:
-            for evt in self.build_tree(this_ref_str, targets):
+            for evt in self._build(this_ref_str, targets):
                 yield evt
 
         this_ref_str = self.source_control.this_ref_str()

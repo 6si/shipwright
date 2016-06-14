@@ -11,12 +11,6 @@ def do_push(client, images):
 
 def push(client, image_tag):
     image, tag = image_tag
-
-    def fmt(s):
-        d = compat.json_loads(s)
-        d.update({'event': 'push', 'image': image})
-        return d
-
     extra = {'event': 'push', 'image': image}
 
     for evt in client.push(image, tag, stream=True):
