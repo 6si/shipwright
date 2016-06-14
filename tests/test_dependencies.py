@@ -71,7 +71,7 @@ def test_exact():
 
 def test_exclude():
     bt = default_build_targets()
-    bt['exclude'] = ['shipwright_test/2']
+    bt['exclude'] = ['shipwright_test/2', 'fake_exclude']
     result = names_list(dependencies.eval(bt, targets))
     assert result == ['shipwright_test/1', 'shipwright_test/independent']
 
