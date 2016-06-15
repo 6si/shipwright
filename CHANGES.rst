@@ -1,4 +1,4 @@
-0.4.1 (unreleased)
+0.4.1 (2016-06-15)
 ------------------
 
 - Fix push crash. (`Issue #70 <https://github.com/6si/shipwright/pull/70>`_)

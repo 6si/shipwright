@@ -20,7 +20,7 @@ history = open('CHANGES.rst').read().replace('.. :changelog:', '')
 
 setup(
     name='shipwright',
-    version='0.4.1.dev0',
+    version='0.4.1',
     url='https://github.com/6si/shipwright/',
     license='Apache Software License',
     author='Scott Robertson',
