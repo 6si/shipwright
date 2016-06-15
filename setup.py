@@ -31,7 +31,7 @@ setup(
     ],
     author_email='scott@6sense.com',
     description=(
-        'The right way to build, tag and ship shared Docker containers.'
+        'The right way to build, tag and ship shared Docker images.'
     ),
     long_description=readme + '\n\n' + history,
     packages=find_packages(),

@@ -15,17 +15,17 @@ def _merge(d1, d2):
 
 def do_build(client, build_ref, targets):
     """
-    Generic function for building multiple containers while
+    Generic function for building multiple images while
     notifying a callback function with output produced.
 
     Given a list of targets it builds the target with the given
     build_func while streaming the output through the given
     show_func.
 
-    Returns an iterator of (container, docker_image_id) pairs as
+    Returns an iterator of (image, docker_image_id) pairs as
     the final output.
 
-    Building a container can take sometime so  the results are returned as
+    Building an image can take sometime so  the results are returned as
     an iterator in case the caller wants to use restults in between builds.
 
     The consequences of this is you must either call it as part of a for loop
@@ -33,7 +33,7 @@ def do_build(client, build_ref, targets):
 
     """
 
-    build_index = {t.container.name: t.ref for t in targets}
+    build_index = {t.image.name: t.ref for t in targets}
 
     for target in targets:
         parent_ref = None
@@ -43,34 +43,34 @@ def do_build(client, build_ref, targets):
             yield evt
 
 
-def build(client, parent_ref, container):
+def build(client, parent_ref, image):
     """
-    builds the given container tagged with <build_ref> and ensures that
+    builds the given image tagged with <build_ref> and ensures that
     it depends on it's parent if it's part of this build group (shares
     the same namespace)
     """
 
     merge_config = {
         'event': 'build_msg',
-        'container': container,
-        'rev': container.ref,
+        'target': image,
+        'rev': image.ref,
     }
 
     def process_event_(evt):
         evt_parsed = json_loads(evt)
         return _merge(merge_config, evt_parsed)
 
-    built_tags = docker.last_built_from_docker(client, container.name)
-    if container.ref in built_tags:
+    built_tags = docker.last_built_from_docker(client, image.name)
+    if image.ref in built_tags:
         return []
 
     build_evts = client.build(
-        fileobj=mkcontext(parent_ref, container.path),
+        fileobj=mkcontext(parent_ref, image.path),
         rm=True,
         custom_context=True,
         stream=True,
-        tag='{0}:{1}'.format(container.name, container.ref),
-        dockerfile=os.path.basename(container.path),
+        tag='{0}:{1}'.format(image.name, image.ref),
+        dockerfile=os.path.basename(image.path),
     )
 
     return (process_event_(evt) for evt in build_evts)

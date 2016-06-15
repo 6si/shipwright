@@ -127,10 +127,10 @@ def argparser():
     )
 
     subparsers.add_parser(
-        'build', help='builds containers', parents=[common],
+        'build', help='builds images', parents=[common],
     )
     push = subparsers.add_parser(
-        'push', help='pushes built containers', parents=[common],
+        'push', help='pushes built images', parents=[common],
     )
     push.add_argument('--no-build', action='store_true')
 
@@ -279,9 +279,9 @@ def pretty_event(evt, show_progress):
         return formatted_message
 
     name = None
-    container = evt.get('container')
-    if container is not None:
-        name = container.name
+    target = evt.get('target')
+    if target is not None:
+        name = target.name
     else:
         name = evt.get('image')
     prettify = memo(
@@ -325,13 +325,8 @@ def switch(rec, show_progress):
     elif 'error' in rec:
         return '[ERROR] {0}'.format(rec['errorDetail']['message'])
     elif rec['event'] == 'tag':
-        return 'Tagging {image} to {name}:{tag}'.format(
-            name=rec['container'].name,
-            image=rec['image'],
-            tag=rec['tag'],
-        )
-    elif rec['event'] == 'removed':
-        return 'Untagging {image}:{tag}'.format(**rec)
+        fmt = 'Tagging {rec[old_image]} to {rec[repository]}:{rec[tag]}'
+        return fmt.format(rec=rec)
     elif rec['event'] == 'push' and 'aux' in rec:
         return None
     else:

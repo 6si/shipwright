@@ -142,7 +142,7 @@ def mkcontext(tag, docker_path):
     This method expects that there will be a Dockerfile in the same
     directory as path. The contents of which will be substituted
     with a tag that ensures that the image depends on a parent built
-    within the same build_ref (bulid group) as the container being built.
+    within the same build_ref (bulid group) as the image being built.
     """
 
     return bundle_docker_dir(

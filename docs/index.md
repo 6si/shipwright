@@ -1,10 +1,10 @@
 ---
 layout: default
-title: Shipwright | The right way to build, tag and ship shared Docker containers.
+title: Shipwright | The right way to build, tag and ship shared Docker images.
 ---
 
 <strong>Shipwright | The right way to build, tag and 
-ship Docker containers.</strong>
+ship Docker images.</strong>
 
 
 Shipwright builds shared Docker images within a git repository
@@ -60,13 +60,13 @@ $ shipwright solomon
 
 Notice that shipwright only rebuilt  the shared library and service1 ignoring the other projects because they have a common git ancestory. Running `docker images` however shows that all the images in the git repository have been tagged with the latest git revision and branch. 
 
-In fact as Shipwright builds  containers it rewrites the Dockerfiles so that they require the base images with tags from the current git revision. This ensures that the entire build is deterministic and reproducable.
+In fact as Shipwright builds  images it rewrites the Dockerfiles so that they require the base images with tags from the current git revision. This ensures that the entire build is deterministic and reproducable.
 
 Publishing
 ----------
 TBD
 
-To publish the built containers after building and tagging, simply include the `--publish` flag when running shipwright
+To publish the built images after building and tagging, simply include the `--publish` flag when running shipwright
 
 ```bash
 $ shipwright --publish <username> 

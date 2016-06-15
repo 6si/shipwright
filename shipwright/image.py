@@ -3,37 +3,37 @@ from __future__ import absolute_import
 import os
 from collections import namedtuple
 
-Container = namedtuple(
-    'Container',
+Image = namedtuple(
+    'Image',
     ['name', 'dir_path', 'path', 'parent', 'short_name'],
 )
 
 
-def list_containers(namespace, name_map, root_path):
-    containers = []
+def list_images(namespace, name_map, root_path):
+    images = []
     for path in build_files(root_path):
-        name, short_name = container_name(namespace, name_map, root_path, path)
-        containers.append(Container(
+        name, short_name = image_name(namespace, name_map, root_path, path)
+        images.append(Image(
             name=name,
             short_name=short_name,
             dir_path=os.path.dirname(path),
             path=path,
             parent=parent(path),
         ))
-    return containers
+    return images
 
 
-def container_name(namespace, name_map, root_path, path):
+def image_name(namespace, name_map, root_path, path):
     """
-    Determines the name of the container from the config file
+    Determines the name of the image from the config file
     or based on it's parent directory name.
 
-    >>> container_name(
+    >>> image_name(
     ...     'shipwright', {'blah':'foo/blah'}, 'x/', 'x/blah/Dockerfile',
     ... )
     ('foo/blah', 'foo/blah')
 
-    >>> container_name(
+    >>> image_name(
     ...     'shipwright', {'blah':'foo/blah'}, 'x/', 'x/baz/Dockerfile'
     ... )
     ('shipwright/baz', 'baz')
@@ -60,20 +60,20 @@ def build_files(build_root):
     Setup creates 3  dockerfiles under test root along with other
     files
 
-    >>> test_root = getfixture('tmpdir').mkdir('containers')
-    >>> test_root.mkdir('container1').join('Dockerfile').write('FROM ubuntu')
-    >>> test_root.mkdir('container2').join('Dockerfile').write('FROM ubuntu')
-    >>> container3 = test_root.mkdir('container3')
-    >>> container3.join('Dockerfile').write('FROM ubuntu')
-    >>> container3.join('Dockerfile-dev').write('FROM ubuntu')
+    >>> test_root = getfixture('tmpdir').mkdir('images')
+    >>> test_root.mkdir('image1').join('Dockerfile').write('FROM ubuntu')
+    >>> test_root.mkdir('image2').join('Dockerfile').write('FROM ubuntu')
+    >>> image3 = test_root.mkdir('image3')
+    >>> image3.join('Dockerfile').write('FROM ubuntu')
+    >>> image3.join('Dockerfile-dev').write('FROM ubuntu')
     >>> other = test_root.mkdir('other')
     >>> _ = other.mkdir('subdir1')
     >>> other.mkdir('subdir2').join('empty.txt').write('')
 
     >>> files = build_files(str(test_root))
     >>> sorted(files)  # doctest: +ELLIPSIS +NORMALIZE_WHITESPACE
-    ['.../container1/Dockerfile', '.../container2/Dockerfile',
-    '.../container3/Dockerfile', '.../container3/Dockerfile-dev']
+    ['.../image1/Dockerfile', '.../image2/Dockerfile',
+    '.../image3/Dockerfile', '.../image3/Dockerfile-dev']
 
     """
     for root, dirs, files in os.walk(build_root):
