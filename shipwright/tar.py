@@ -47,13 +47,13 @@ def bundle_docker_dir(tag, docker_path):
     t = tarfile.open(fileobj=fileobj, mode='a')
     dfinfo = tarfile.TarInfo(dockerfile_name)
 
-    contents = tag_parent(tag, open(join(path, dockerfile_name)).read())
-    if not isinstance(contents, bytes):
-        contents = contents.encode('utf8')
-    dockerfile = io.BytesIO(contents)
+    with io.open(docker_path, 'r') as f:
+        contents = tag_parent(tag, f.read()).encode('utf8')
 
-    dfinfo.size = len(dockerfile.getvalue())
-    t.addfile(dfinfo, dockerfile)
+    dfinfo.size = len(contents)
+    with io.BytesIO(contents) as dockerfile:
+        t.addfile(dfinfo, dockerfile)
+
     t.close()
     fileobj.seek(0)
     return fileobj
