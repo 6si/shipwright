@@ -24,11 +24,11 @@ class Shipwright(object):
 
         # now that we're built and tagged all the images.
         # (either during the process of building or forwarding the tag)
-        # tag all containers with the human readable tags.
+        # tag all images with the human readable tags.
         tags = self.source_control.default_tags() + self.tags + [this_ref_str]
         for image in targets:
             for tag in tags:
-                yield docker.tag_container(
+                yield docker.tag_image(
                     self.docker_client,
                     image,
                     tag,

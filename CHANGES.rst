@@ -1,7 +1,8 @@
 0.4.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Correct naming, shipwright builds docker images.
+  (`Issue #71 <https://github.com/6si/shipwright/pull/71>`_)
 
 
 0.4.1 (2016-06-15)

@@ -6,7 +6,7 @@ from shipwright import tar
 
 
 def test_mkcontext(tmpdir):
-    tmp = tmpdir.mkdir('container')
+    tmp = tmpdir.mkdir('image')
     docker_path = tmp.join('Dockerfile')
     docker_path.write('FROM example.com/r/image')
     tmp.join('bogus').write('hi mom')
@@ -19,7 +19,7 @@ def test_mkcontext(tmpdir):
 
 
 def test_mkcontext_dockerignore(tmpdir):
-    tmp = tmpdir.mkdir('container')
+    tmp = tmpdir.mkdir('image')
     docker_path = tmp.join('Dockerfile')
     docker_path.write('FROM example.com/r/image')
     tmp.join('.dockerignore').write('bogus2')

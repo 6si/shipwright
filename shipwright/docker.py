@@ -32,24 +32,25 @@ def encode_tag(tag):
     return tag.replace('/', '-')
 
 
-def tag_container(client, container, new_ref):
+def tag_image(client, image, new_ref):
     tag = encode_tag(new_ref)
-    image = container.name + ':' + container.ref
+    old_image = image.name + ':' + image.ref
+    repository = image.name
     evt = {
         'event': 'tag',
-        'container': container,
-        'image': image,
+        'old_image': old_image,
+        'repository': repository,
         'tag': tag,
     }
     try:
         client.tag(
-            image,
-            container.name,
+            old_image,
+            repository,
             tag=tag,
             force=True,
         )
     except d_errors.NotFound:
-        message = 'Error tagging {}, not found'.format(image)
+        message = 'Error tagging {}, not found'.format(old_image)
         evt.update({
             'error': message,
             'errorDetail': {'message': message},

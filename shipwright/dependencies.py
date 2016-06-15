@@ -6,7 +6,7 @@ from collections import namedtuple
 from . import zipper
 
 
-# [(tree -> [ImageNames])] -> [Containers]
+# [(tree -> [ImageNames])] -> [Images]
 def eval(build_targets, targets):
     """
     Given a list of partially applied functions that
@@ -51,16 +51,16 @@ def _find(tree, name):
     return tree.find(find_)
 
 
-def _make_tree(containers):
+def _make_tree(images):
     """
-    Converts a list of containers into a tree represented by a zipper.
+    Converts a list of images into a tree represented by a zipper.
     see http://en.wikipedia.org/wiki/Zipper_(data_structure)
     """
 
     root = _Root(None, None, ())
     tree = zipper.zipper(root, _is_branch, _children, _make_node)
 
-    for c in containers:
+    for c in images:
 
         def is_child(target):
             if not isinstance(target, _Root):

@@ -4,7 +4,7 @@ from collections import namedtuple
 
 import git
 
-from . import container
+from . import image
 
 
 def _last_commit(repo, paths):
@@ -17,34 +17,34 @@ def _last_commit(repo, paths):
         return commit
 
 
-_Target = namedtuple('Target', ['container', 'ref', 'children'])
+_Target = namedtuple('Target', ['image', 'ref', 'children'])
 
 
 class Target(_Target):
     @property
     def name(self):
-        return self.container.name
+        return self.image.name
 
     @property
     def short_name(self):
-        return self.container.short_name
+        return self.image.short_name
 
     @property
     def parent(self):
-        return self.container.parent
+        return self.image.parent
 
     @property
     def path(self):
-        return self.container.path
+        return self.image.path
 
 
 del _Target
 
 
-def _container_parents(index, container):
-    while container:
-        yield container
-        container = index.get(container.parent)
+def _image_parents(index, image):
+    while image:
+        yield image
+        image = index.get(image.parent)
 
 
 def _hexsha(ref):
@@ -69,18 +69,18 @@ class GitSourceControl(object):
     def targets(self):
         repo = self._repo
 
-        containers = container.list_containers(
+        images = image.list_images(
             self._namespace,
             self._name_map,
             self.path,
         )
-        c_index = {c.name: c for c in containers}
+        c_index = {c.name: c for c in images}
 
         targets = []
 
-        for c in containers:
-            paths = [p.dir_path for p in _container_parents(c_index, c)]
+        for c in images:
+            paths = [p.dir_path for p in _image_parents(c_index, c)]
             ref = _hexsha(_last_commit(repo, paths))
-            targets.append(Target(container=c, ref=ref, children=None))
+            targets.append(Target(image=c, ref=ref, children=None))
 
         return targets

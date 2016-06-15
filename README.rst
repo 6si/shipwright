@@ -102,7 +102,7 @@ Running ``docker images`` however shows that all the images in the git
 repository have been tagged with the latest git revision, branch and
 ``latest``.
 
-In fact, as Shipwright builds containers it rewrites the Dockerfiles so
+In fact, as Shipwright builds images it rewrites the Dockerfiles so
 that they require the base images with tags from the current git
 revision. This ensures that the entire build is deterministic and
 reproducible.

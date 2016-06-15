@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from shipwright import container, dependencies, source_control
+from shipwright import dependencies, image, source_control
 
 
 def names_list(targets):
@@ -13,7 +13,7 @@ def _names(tree):
 
 def target(name, dir_path, path, parent):
     return source_control.Target(
-        container.Container(name, dir_path, path, parent, name),
+        image.Image(name, dir_path, path, parent, name),
         'abc', None,
     )
 
@@ -99,12 +99,12 @@ def test_make_tree():
     ]
 
     sr_test_1 = root.down().node()
-    assert sr_test_1.container.name == 'shipwright_test/1'
+    assert sr_test_1.image.name == 'shipwright_test/1'
 
     assert _names(root.down()) == ['shipwright_test/2', 'shipwright_test/3']
 
     sr_test_2 = root.down().down().node()
-    assert sr_test_2.container.name == 'shipwright_test/2'
+    assert sr_test_2.image.name == 'shipwright_test/2'
 
     assert _names(root.down().down()) == ['shipwright_test/3']
     assert root.down().right().node().name == 'shipwright_test/independent'
