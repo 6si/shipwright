@@ -3,6 +3,8 @@
 
 - Correct naming, shipwright builds docker images.
   (`Issue #71 <https://github.com/6si/shipwright/pull/71>`_)
+- Allow building with a detached HEAD
+  (`Issue #72 <https://github.com/6si/shipwright/pull/72>`_)
 
 
 0.4.1 (2016-06-15)
