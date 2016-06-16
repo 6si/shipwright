@@ -60,7 +60,11 @@ class GitSourceControl(object):
         self._repo = git.Repo(path)
 
     def default_tags(self):
-        branch = self._repo.active_branch.name
+        repo = self._repo
+        if repo.head.is_detached:
+            return []
+
+        branch = repo.active_branch.name
         return [branch]
 
     def this_ref_str(self):
