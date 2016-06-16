@@ -1,4 +1,4 @@
-0.4.2 (unreleased)
+0.4.2 (2016-06-16)
 ------------------
 
 - Correct naming, shipwright builds docker images.
