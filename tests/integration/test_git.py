@@ -29,6 +29,7 @@ def test_default_tags_works_with_detached_head(tmpdir):
 
     assert scm.default_tags() == []
 
+
 def test_dirty_tags(tmpdir):
     tmp = tmpdir.join('shipwright-sample')
     path = str(tmp)
@@ -44,44 +45,37 @@ def test_dirty_tags(tmpdir):
         name_map={},
     )
 
-    refs = lambda: {target.image.name: target.ref for target in scm.targets()}
+    def refs():
+        return {target.image.name: target.ref for target in scm.targets()}
     clean_refs = refs()
     clean_ref_str = scm.this_ref_str()
 
-    tmp.join('shared/base.txt').write('Hi mum') # Untracked
+    tmp.join('shared/base.txt').write('Hi mum')  # Untracked
 
-    dirty_refs = refs()
-
-    assert dirty_refs['shipwright/base'] == clean_refs['shipwright/base']
-    assert dirty_refs['shipwright/shared'] != clean_refs['shipwright/shared']
-    assert dirty_refs['shipwright/service1'] != clean_refs['shipwright/service1']
-    assert '-dirty-' in dirty_refs['shipwright/service1']
-    assert '-dirty-' in dirty_refs['shipwright/shared']
+    assert refs()['shipwright/base'] == clean_refs['shipwright/base']
+    assert refs()['shipwright/shared'] != clean_refs['shipwright/shared']
+    assert refs()['shipwright/service1'] != clean_refs['shipwright/service1']
+    assert '-dirty-' in refs()['shipwright/service1']
+    assert '-dirty-' in refs()['shipwright/shared']
     assert clean_ref_str != scm.this_ref_str()
 
-    repo.index.add(['shared/base.txt']) # Tracked
+    repo.index.add(['shared/base.txt'])  # Tracked
 
-    dirty_refs = refs()
-
-    assert dirty_refs['shipwright/base'] == clean_refs['shipwright/base']
-    assert dirty_refs['shipwright/shared'] != clean_refs['shipwright/shared']
-    assert dirty_refs['shipwright/service1'] != clean_refs['shipwright/service1']
-    assert '-dirty-' in dirty_refs['shipwright/service1']
-    assert '-dirty-' in dirty_refs['shipwright/shared']
+    assert refs()['shipwright/base'] == clean_refs['shipwright/base']
+    assert refs()['shipwright/shared'] != clean_refs['shipwright/shared']
+    assert refs()['shipwright/service1'] != clean_refs['shipwright/service1']
+    assert '-dirty-' in refs()['shipwright/service1']
+    assert '-dirty-' in refs()['shipwright/shared']
     assert clean_ref_str != scm.this_ref_str()
 
-    tmp.join('base/base.txt').write('Hi again') # Modified, but not added to index
-    dirty_refs = refs()
-    assert dirty_refs['shipwright/base'] != clean_refs['shipwright/base']
+    tmp.join('base/base.txt').write('Hi again')  # Modified, not added to index
+    assert refs()['shipwright/base'] != clean_refs['shipwright/base']
 
-    repo.index.add(['base/base.txt']) # Modified version added to index
-    dirty_refs = refs()
-    assert dirty_refs['shipwright/base'] != clean_refs['shipwright/base']
+    repo.index.add(['base/base.txt'])  # Modified version added to index
+    assert refs()['shipwright/base'] != clean_refs['shipwright/base']
 
-    tmp.join('base/base.txt').remove() # Deleted, but not removed from index
-    dirty_refs = refs()
-    assert dirty_refs['shipwright/base'] != clean_refs['shipwright/base']
+    tmp.join('base/base.txt').remove()  # Deleted, but not removed from index
+    assert refs()['shipwright/base'] != clean_refs['shipwright/base']
 
-    repo.index.remove(['base/base.txt']) # Remove from index
-    dirty_refs = refs()
-    assert dirty_refs['shipwright/base'] != clean_refs['shipwright/base']
+    repo.index.remove(['base/base.txt'])  # Remove from index
+    assert refs()['shipwright/base'] != clean_refs['shipwright/base']
