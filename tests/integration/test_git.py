@@ -42,6 +42,7 @@ def test_dirty_tags_untracked(tmpdir):
         __name__,
         'examples/shipwright-sample',
     )
+    repo = create_repo(path, source)
 
     scm = source_control.GitSourceControl(
         path=path,
@@ -52,6 +53,7 @@ def test_dirty_tags_untracked(tmpdir):
 
     old_refs = _refs(scm.targets())
     old_ref_str = scm.this_ref_str()
+    tag = repo.head.ref.commit.hexsha[:12]
 
     tmp.join('shared/base.txt').write('Hi mum')  # Untracked
     assert scm.is_dirty()
@@ -62,9 +64,15 @@ def test_dirty_tags_untracked(tmpdir):
     assert new_refs['shipwright/base'] == old_refs['shipwright/base']
     assert new_refs['shipwright/shared'] != old_refs['shipwright/shared']
     assert new_refs['shipwright/service1'] != old_refs['shipwright/service1']
-    assert '-dirty-' in new_refs['shipwright/service1']
-    assert '-dirty-' in new_refs['shipwright/shared']
-    assert old_ref_str != new_ref_str
+
+    dirty_tag = tag + '-dirty-adc37b7d003f'
+    assert new_refs == {
+        'shipwright/base': tag,
+        'shipwright/service1': dirty_tag,
+        'shipwright/shared': dirty_tag,
+    }
+    assert old_ref_str == tag
+    assert new_ref_str == dirty_tag
 
 
 def test_dirty_tags_tracked(tmpdir):
@@ -85,6 +93,7 @@ def test_dirty_tags_tracked(tmpdir):
 
     old_refs = _refs(scm.targets())
     old_ref_str = scm.this_ref_str()
+    tag = repo.head.ref.commit.hexsha[:12]
 
     tmp.join('shared/base.txt').write('Hi mum')  # Untracked
     repo.index.add(['shared/base.txt'])
@@ -96,9 +105,15 @@ def test_dirty_tags_tracked(tmpdir):
     assert new_refs['shipwright/base'] == old_refs['shipwright/base']
     assert new_refs['shipwright/shared'] != old_refs['shipwright/shared']
     assert new_refs['shipwright/service1'] != old_refs['shipwright/service1']
-    assert '-dirty-' in new_refs['shipwright/service1']
-    assert '-dirty-' in new_refs['shipwright/shared']
-    assert old_ref_str != new_ref_str
+
+    dirty_tag = tag + '-dirty-adc37b7d003f'
+    assert new_refs == {
+        'shipwright/base': tag,
+        'shipwright/service1': dirty_tag,
+        'shipwright/shared': dirty_tag,
+    }
+    assert old_ref_str == tag
+    assert new_ref_str == dirty_tag
 
 
 def _git_modified_not_added_to_index(tmp, repo):
@@ -108,6 +123,7 @@ def _git_modified_not_added_to_index(tmp, repo):
 def _git_modified_version_added_to_index(tmp, repo):
     tmp.join('base/base.txt').write('Hi again')
     repo.index.add(['base/base.txt'])  # Modified version added to index
+    return '-dirty-5227fefb4c30'
 
 
 def _git_deleted_but_not_removed_from_index(tmp, repo):
@@ -149,11 +165,21 @@ def test_dirty_tags_various(func, tmpdir):
     assert not scm.is_dirty()
 
     old_refs = _refs(scm.targets())
+    old_ref_str = scm.this_ref_str()
+    tag = repo.head.ref.commit.hexsha[:12]
 
-    tmp.join('base/base.txt').write('Hi again')  # Modified, not added to index
-    func(tmp, repo)
+    expected_tag_suffix = func(tmp, repo) or '-dirty-0d6d6d2f8739'
     assert scm.is_dirty()
 
     new_refs = _refs(scm.targets())
+    new_ref_str = scm.this_ref_str()
 
     assert new_refs['shipwright/base'] != old_refs['shipwright/base']
+    dirty_tag = tag + expected_tag_suffix
+    assert new_refs == {
+        'shipwright/base': dirty_tag,
+        'shipwright/service1': dirty_tag,
+        'shipwright/shared': dirty_tag,
+    }
+    assert old_ref_str == tag
+    assert new_ref_str == dirty_tag
