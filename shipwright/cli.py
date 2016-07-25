@@ -126,9 +126,15 @@ def argparser():
         help='extra tags to apply to the images',
     )
 
-    subparsers.add_parser(
+    build = subparsers.add_parser(
         'build', help='builds images', parents=[common],
     )
+    build.add_argument(
+        '--dirty',
+        help='Build working tree, including uncommited and untracked changes',
+        action='store_true',
+    )
+
     push = subparsers.add_parser(
         'push', help='pushes built images', parents=[common],
     )
@@ -151,6 +157,7 @@ def old_style_arg_dict(namespace):
         '--exclude': _flatten(ns.exclude),
         '--help': False,
         '--no-build': getattr(ns, 'no_build', False),
+        '--dirty': getattr(ns, 'dirty', False),
         '--upto': _flatten(ns.upto),
         '--x-assert-hostname': ns.x_assert_hostname,
         '-H': ns.docker_host,
@@ -208,6 +215,7 @@ def process_arguments(path, arguments, client_cfg, environ):
         'dependents': arguments['--dependents'],
         'exclude': arguments['--exclude'],
         'upto': arguments['--upto'],
+        'dirty': arguments['--dirty'],
     }
 
     no_build = False

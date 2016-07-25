@@ -14,6 +14,7 @@ def get_defaults():
         '--exclude': [],
         '--help': False,
         '--no-build': False,
+        '--dirty': False,
         '--upto': [],
         '--x-assert-hostname': False,
         '-H': None,

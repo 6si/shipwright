@@ -392,6 +392,86 @@ def test_exact(tmpdir):
             cli.remove_image(image, force=True)
 
 
+def test_dirty_fails_without_flag(tmpdir):
+    tmp = tmpdir.join('shipwright-sample')
+    path = str(tmp)
+    source = pkg_resources.resource_filename(
+        __name__,
+        'examples/shipwright-sample',
+    )
+    create_repo(path, source)
+    tmp.join('service1/base.txt').write('Some text')
+    client_cfg = docker_utils.kwargs_from_env()
+
+    cli = docker.Client(version='1.18', **client_cfg)
+
+    args = get_defaults()
+
+    try:
+        with pytest.raises(SystemExit):
+            shipw_cli.run(
+                path=path,
+                client_cfg=client_cfg,
+                arguments=args,
+                environ={},
+            )
+
+    finally:
+        old_images = (
+            cli.images(name='shipwright/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+
+def test_dirty_flag(tmpdir):
+    tmp = tmpdir.join('shipwright-sample')
+    path = str(tmp)
+    source = pkg_resources.resource_filename(
+        __name__,
+        'examples/shipwright-sample',
+    )
+    create_repo(path, source)
+    tmp.join('service1/base.txt').write('Some text')
+    client_cfg = docker_utils.kwargs_from_env()
+
+    cli = docker.Client(version='1.18', **client_cfg)
+
+    args = get_defaults()
+    args['--dirty'] = True
+
+    try:
+        shipw_cli.run(
+            path=path,
+            client_cfg=client_cfg,
+            arguments=args,
+            environ={},
+        )
+
+        service1, shared, base = (
+            cli.images(name='shipwright/service1') +
+            cli.images(name='shipwright/shared') +
+            cli.images(name='shipwright/base')
+        )
+
+        assert 'shipwright/service1:latest' in service1['RepoTags']
+        assert 'shipwright/service1:master' in service1['RepoTags']
+        assert 'shipwright/shared:latest' in shared['RepoTags']
+        assert 'shipwright/shared:master' in shared['RepoTags']
+        assert 'shipwright/base:latest' in base['RepoTags']
+        assert 'shipwright/base:master' in base['RepoTags']
+        print(cli.images(name='shipwright/base'))
+
+    finally:
+        old_images = (
+            cli.images(name='shipwright/service1', quiet=True) +
+            cli.images(name='shipwright/shared', quiet=True) +
+            cli.images(name='shipwright/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+
 def test_exit_on_failure_but_build_completes(tmpdir):
     path = str(tmpdir.join('failing-build'))
     source = pkg_resources.resource_filename(

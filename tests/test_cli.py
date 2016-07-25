@@ -16,6 +16,7 @@ def get_defaults():
         '--exclude': [],
         '--help': False,
         '--no-build': False,
+        '--dirty': False,
         '--upto': [],
         '--x-assert-hostname': False,
         '-H': None,
@@ -89,6 +90,7 @@ def test_args():
         '--exclude': [],
         '--help': False,
         '--no-build': False,
+        '--dirty': False,
         '--upto': [],
         '--x-assert-hostname': True,
         '-H': None,
@@ -103,7 +105,7 @@ def test_args_2():
     args = [
         '--account=x', '--x-assert-hostname', 'build',
         '-d', 'foo', 'bar',
-        '-t', 'foo',
+        '-t', 'foo', '--dirty',
     ]
     parser = cli.argparser()
     arguments = cli.old_style_arg_dict(parser.parse_args(args))
@@ -116,6 +118,7 @@ def test_args_2():
         '--exclude': [],
         '--help': False,
         '--no-build': False,
+        '--dirty': True,
         '--upto': [],
         '--x-assert-hostname': True,
         '-H': None,
@@ -139,6 +142,7 @@ def test_args_base():
         '--exclude': [],
         '--help': False,
         '--no-build': False,
+        '--dirty': False,
         '--upto': [],
         '--x-assert-hostname': False,
         '-H': None,
