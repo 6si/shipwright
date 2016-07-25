@@ -1,7 +1,9 @@
 0.4.3 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Add --dirty to build from working tree, even when uncommitted and untracked changes exist.
+  (`Issue #74 <https://github.com/6si/shipwright/74>`_).
+  Thanks `James Pickering <https://github.com/jamespic>`_!
 
 
 0.4.2 (2016-06-16)
