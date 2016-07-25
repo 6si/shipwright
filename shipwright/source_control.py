@@ -62,27 +62,37 @@ def _hash_blob(blob):
         return blob.repo.git.hash_object(blob.abspath)
 
 
+def _hash_blobs(blobs):
+    return [(b.path, _hash_blob(b)) for b in blobs if b]
+
+
+def _abspath(repo_wd, path):
+    return os.path.abspath(os.path.join(repo_wd, path))
+
+
+def _in_paths(repo_wd, base_paths, path):
+    wd = repo_wd
+    p = _abspath(repo_wd, path)
+    return any(p.startswith(_abspath(wd, bp) + os.sep) for bp in base_paths)
+
+
 def _dirty_suffix(repo, base_paths=['.']):
-    def abspath(path):
-        return os.path.abspath(os.path.join(repo.working_dir, path))
-
-    def hash_blobs(blobs):
-        return [(b.path, _hash_blob(b)) for b in blobs if b]
-
-    def in_paths(path):
-        return any(abspath(path).startswith(abspath(base_path) + os.sep)
-                   for base_path in base_paths)
-
+    repo_wd = repo.working_dir
     diff = repo.head.commit.diff(None)
-    a_hashes = hash_blobs(map(lambda d: d.a_blob, diff))
-    b_hashes = hash_blobs(map(lambda d: d.b_blob, diff))
-    untracked_hashes = [(path, repo.git.hash_object(path))
-                        for path in repo.untracked_files]
+    a_hashes = _hash_blobs(d.a_blob for d in diff)
+    b_hashes = _hash_blobs(d.b_blob for d in diff)
+
+    u_files = repo.untracked_files
+    untracked_hashes = [(path, repo.git.hash_object(path)) for path in u_files]
+
     hashes = sorted(a_hashes) + sorted(b_hashes + untracked_hashes)
-    filtered_hashes = [(path, h) for path, h in hashes if in_paths(path)]
+    filtered_hashes = [
+        (path, h) for path, h in hashes if _in_paths(repo_wd, base_paths, path)
+    ]
 
     if not filtered_hashes:
         return ''
+
     digest = hashlib.sha256()
     for path, h in filtered_hashes:
         digest.update(path.encode('utf-8') + b'\0' + h.encode('utf-8'))
@@ -95,6 +105,10 @@ class GitSourceControl(object):
         self._namespace = namespace
         self._name_map = name_map
         self._repo = git.Repo(path)
+
+    def is_dirty(self):
+        repo = self._repo
+        return bool(repo.untracked_files or repo.head.commit.diff(None))
 
     def default_tags(self):
         repo = self._repo

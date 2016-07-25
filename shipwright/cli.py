@@ -104,6 +104,11 @@ def argparser():
     subparsers.required = True
 
     common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        '--dirty',
+        help='Build working tree, including uncommited and untracked changes',
+        action='store_true',
+    )
     a_arg(
         common, '-d', '--dependants',
         help='Build DEPENDANTS and all its dependants',
@@ -126,13 +131,8 @@ def argparser():
         help='extra tags to apply to the images',
     )
 
-    build = subparsers.add_parser(
+    subparsers.add_parser(
         'build', help='builds images', parents=[common],
-    )
-    build.add_argument(
-        '--dirty',
-        help='Build working tree, including uncommited and untracked changes',
-        action='store_true',
     )
 
     push = subparsers.add_parser(
@@ -169,12 +169,14 @@ def old_style_arg_dict(namespace):
 
 
 def main():
-    arguments = old_style_arg_dict(argparser().parse_args())
+    arguments = argparser().parse_args()
+    old_style_args = old_style_arg_dict(arguments)
     return run(
         path=os.getcwd(),
-        arguments=arguments,
+        arguments=old_style_args,
         client_cfg=kwargs_from_env(),
         environ=os.environ,
+        new_style_args=arguments,
     )
 
 
@@ -215,7 +217,6 @@ def process_arguments(path, arguments, client_cfg, environ):
         'dependents': arguments['--dependents'],
         'exclude': arguments['--exclude'],
         'upto': arguments['--upto'],
-        'dirty': arguments['--dirty'],
     }
 
     no_build = False
@@ -228,14 +229,26 @@ def process_arguments(path, arguments, client_cfg, environ):
     return build_targets, no_build, command_name, dump_file, config, client
 
 
-def run(path, arguments, client_cfg, environ):
+def run(path, arguments, client_cfg, environ, new_style_args=None):
     args = process_arguments(
         path, arguments, client_cfg, environ,
     )
     build_targets, no_build, command_name, dump_file, config, client = args
+
+    if new_style_args is None:
+        dirty = False
+    else:
+        dirty = new_style_args.dirty
+
     namespace = config['namespace']
     name_map = config.get('names', {})
     scm = source_control.GitSourceControl(path, namespace, name_map)
+    if not dirty and scm.is_dirty():
+        return (
+            'Aborting build, due to uncommitted changes. If you are not ready '
+            'to commit these changes, re-run with the --dirty flag.'
+        )
+
     sw = Shipwright(scm, client, arguments['tags'])
     command = getattr(sw, command_name)
 
