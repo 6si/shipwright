@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import argparse
+
 import docker
 import pkg_resources
 import pytest
@@ -8,6 +10,10 @@ from docker import utils as docker_utils
 from shipwright import cli as shipw_cli
 
 from .utils import commit_untracked, create_repo, get_defaults
+
+
+def default_args():
+    return argparse.Namespace(dirty=False)
 
 
 def test_sample(tmpdir):
@@ -403,25 +409,16 @@ def test_dirty_fails_without_flag(tmpdir):
     tmp.join('service1/base.txt').write('Some text')
     client_cfg = docker_utils.kwargs_from_env()
 
-    cli = docker.Client(version='1.18', **client_cfg)
-
     args = get_defaults()
 
-    try:
-        with pytest.raises(SystemExit):
-            shipw_cli.run(
-                path=path,
-                client_cfg=client_cfg,
-                arguments=args,
-                environ={},
-            )
-
-    finally:
-        old_images = (
-            cli.images(name='shipwright/base', quiet=True)
-        )
-        for image in old_images:
-            cli.remove_image(image, force=True)
+    result = shipw_cli.run(
+        path=path,
+        client_cfg=client_cfg,
+        arguments=args,
+        environ={},
+    )
+    assert '--dirty' in result
+    assert 'Abort' in result
 
 
 def test_dirty_flag(tmpdir):
@@ -437,15 +434,16 @@ def test_dirty_flag(tmpdir):
 
     cli = docker.Client(version='1.18', **client_cfg)
 
-    args = get_defaults()
-    args['--dirty'] = True
+    args = default_args()
+    args.dirty = True
 
     try:
         shipw_cli.run(
             path=path,
             client_cfg=client_cfg,
-            arguments=args,
+            arguments=get_defaults(),
             environ={},
+            new_style_args=args,
         )
 
         service1, shared, base = (
@@ -460,7 +458,6 @@ def test_dirty_flag(tmpdir):
         assert 'shipwright/shared:master' in shared['RepoTags']
         assert 'shipwright/base:latest' in base['RepoTags']
         assert 'shipwright/base:master' in base['RepoTags']
-        print(cli.images(name='shipwright/base'))
 
     finally:
         old_images = (

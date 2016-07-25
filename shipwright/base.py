@@ -2,16 +2,6 @@ from __future__ import absolute_import
 
 from . import build, dependencies, docker, push
 
-_DIRTY_ERROR = {
-    'error': True,
-    'event': 'build_msg',
-    'errorDetail': {
-        'message': 'Aborting build, due to uncommitted changes.'
-        ' If you are not ready to commit these changes, re-run'
-        ' with the --dirty flag.',
-    },
-}
-
 
 class Shipwright(object):
     def __init__(self, source_control, docker_client, tags):
@@ -25,12 +15,9 @@ class Shipwright(object):
     def build(self, build_targets):
         targets = dependencies.eval(build_targets, self.targets())
         this_ref_str = self.source_control.this_ref_str()
-        if '-dirty-' in this_ref_str and not build_targets['dirty']:
-            return [_DIRTY_ERROR]
         return self._build(this_ref_str, targets)
 
     def _build(self, this_ref_str, targets):
-        # what needs building
         for evt in build.do_build(self.docker_client, this_ref_str, targets):
             yield evt
 
