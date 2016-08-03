@@ -53,6 +53,8 @@ def _image_parents(index, image):
 def _hexsha(ref):
     if ref is not None:
         return ref.hexsha[:12]
+    else:
+        return 'g' * 12
 
 
 def _hash_blob(blob):
