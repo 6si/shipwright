@@ -8,11 +8,11 @@
 ------------------
 
 - Add --dirty to build from working tree, even when uncommitted and untracked changes exist.
-  (`Issue #74 <https://github.com/6si/shipwright/74>`_).
+  (`Issue #74 <https://github.com/6si/shipwright/pull/74>`_).
   Thanks `James Pickering <https://github.com/jamespic>`_!
 - Ignore images without RepoTags when gathering built_tags to fix a crash
   caused by docker images pulled via RepoDigest.
-  (`Issue #77 <https://github.com/6si/shipwright/77>`).
+  (`Issue #77 <https://github.com/6si/shipwright/issues/77>`_).
   Thanks `kgpayne <https://github.com/kgpayne>`_!
 
 
