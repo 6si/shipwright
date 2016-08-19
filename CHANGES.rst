@@ -1,4 +1,4 @@
-0.4.3 (unreleased)
+0.5.0 (2016-08-19)
 ------------------
 
 - Add --dirty to build from working tree, even when uncommitted and untracked changes exist.
