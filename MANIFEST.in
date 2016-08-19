@@ -1,5 +1,7 @@
 include CHANGES.rst
 include README.rst
+include LICENSE
+include NOTICE
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
