@@ -25,7 +25,13 @@ def key_from_image_info(image_info_dict):
 
 def last_built_from_docker(client, name):
     images = client.images(name)
-    return list([x for i in images for x in key_from_image_info(i)])
+    built_tags = set()
+    for image in images:
+        if image['RepoTags'] is None:
+            continue
+        for key in key_from_image_info(image):
+            built_tags.add(key)
+    return built_tags
 
 
 def encode_tag(tag):

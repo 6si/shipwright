@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 import argparse
 
-import docker
 import pkg_resources
 import pytest
 from docker import utils as docker_utils
@@ -16,7 +15,7 @@ def default_args():
     return argparse.Namespace(dirty=False)
 
 
-def test_sample(tmpdir):
+def test_sample(tmpdir, docker_client):
     path = str(tmpdir.join('shipwright-sample'))
     source = pkg_resources.resource_filename(
         __name__,
@@ -26,7 +25,7 @@ def test_sample(tmpdir):
     tag = repo.head.ref.commit.hexsha[:12]
 
     client_cfg = docker_utils.kwargs_from_env()
-    cli = docker.Client(version='1.18', **client_cfg)
+    cli = docker_client
 
     try:
         shipw_cli.run(
@@ -69,7 +68,7 @@ def test_sample(tmpdir):
             cli.remove_image(image, force=True)
 
 
-def test_multi_dockerfile(tmpdir):
+def test_multi_dockerfile(tmpdir, docker_client):
     path = str(tmpdir.join('shipwright-sample'))
     source = pkg_resources.resource_filename(
         __name__,
@@ -79,7 +78,7 @@ def test_multi_dockerfile(tmpdir):
     tag = repo.head.ref.commit.hexsha[:12]
 
     client_cfg = docker_utils.kwargs_from_env()
-    cli = docker.Client(version='1.18', **client_cfg)
+    cli = docker_client
 
     try:
         shipw_cli.run(
@@ -122,7 +121,7 @@ def test_multi_dockerfile(tmpdir):
             cli.remove_image(image, force=True)
 
 
-def test_clean_tree_avoids_rebuild(tmpdir):
+def test_clean_tree_avoids_rebuild(tmpdir, docker_client):
     tmp = tmpdir.join('shipwright-sample')
     path = str(tmp)
     source = pkg_resources.resource_filename(
@@ -133,7 +132,7 @@ def test_clean_tree_avoids_rebuild(tmpdir):
     old_tag = repo.head.ref.commit.hexsha[:12]
 
     client_cfg = docker_utils.kwargs_from_env()
-    cli = docker.Client(version='1.18', **client_cfg)
+    cli = docker_client
 
     try:
 
@@ -201,7 +200,7 @@ def test_clean_tree_avoids_rebuild(tmpdir):
             cli.remove_image(image, force=True)
 
 
-def test_clean_tree_avoids_rebuild_new_image_definition(tmpdir):
+def test_clean_tree_avoids_rebuild_new_image_definition(tmpdir, docker_client):
     tmp = tmpdir.join('shipwright-sample')
     path = str(tmp)
     source = pkg_resources.resource_filename(
@@ -212,7 +211,7 @@ def test_clean_tree_avoids_rebuild_new_image_definition(tmpdir):
     old_tag = repo.head.ref.commit.hexsha[:12]
 
     client_cfg = docker_utils.kwargs_from_env()
-    cli = docker.Client(version='1.18', **client_cfg)
+    cli = docker_client
 
     try:
         shipw_cli.run(
@@ -283,7 +282,7 @@ def test_clean_tree_avoids_rebuild_new_image_definition(tmpdir):
             cli.remove_image(image, force=True)
 
 
-def test_dump_file(tmpdir):
+def test_dump_file(tmpdir, docker_client):
     dump_file = tmpdir.join('dump.txt')
     tmp = tmpdir.join('shipwright-sample')
     path = str(tmp)
@@ -295,7 +294,7 @@ def test_dump_file(tmpdir):
 
     client_cfg = docker_utils.kwargs_from_env()
 
-    cli = docker.Client(version='1.18', **client_cfg)
+    cli = docker_client
 
     try:
         args = get_defaults()
@@ -318,7 +317,7 @@ def test_dump_file(tmpdir):
             cli.remove_image(image, force=True)
 
 
-def test_exclude(tmpdir):
+def test_exclude(tmpdir, docker_client):
     path = str(tmpdir.join('shipwright-sample'))
     source = pkg_resources.resource_filename(
         __name__,
@@ -327,7 +326,7 @@ def test_exclude(tmpdir):
     create_repo(path, source)
     client_cfg = docker_utils.kwargs_from_env()
 
-    cli = docker.Client(version='1.18', **client_cfg)
+    cli = docker_client
 
     args = get_defaults()
     args['--exclude'] = [
@@ -359,7 +358,7 @@ def test_exclude(tmpdir):
             cli.remove_image(image, force=True)
 
 
-def test_exact(tmpdir):
+def test_exact(tmpdir, docker_client):
     path = str(tmpdir.join('shipwright-sample'))
     source = pkg_resources.resource_filename(
         __name__,
@@ -368,7 +367,7 @@ def test_exact(tmpdir):
     create_repo(path, source)
     client_cfg = docker_utils.kwargs_from_env()
 
-    cli = docker.Client(version='1.18', **client_cfg)
+    cli = docker_client
 
     args = get_defaults()
     args['--exact'] = [
@@ -421,7 +420,7 @@ def test_dirty_fails_without_flag(tmpdir):
     assert 'Abort' in result
 
 
-def test_dirty_flag(tmpdir):
+def test_dirty_flag(tmpdir, docker_client):
     tmp = tmpdir.join('shipwright-sample')
     path = str(tmp)
     source = pkg_resources.resource_filename(
@@ -432,7 +431,7 @@ def test_dirty_flag(tmpdir):
     tmp.join('service1/base.txt').write('Some text')
     client_cfg = docker_utils.kwargs_from_env()
 
-    cli = docker.Client(version='1.18', **client_cfg)
+    cli = docker_client
 
     args = default_args()
     args.dirty = True
@@ -469,7 +468,7 @@ def test_dirty_flag(tmpdir):
             cli.remove_image(image, force=True)
 
 
-def test_exit_on_failure_but_build_completes(tmpdir):
+def test_exit_on_failure_but_build_completes(tmpdir, docker_client):
     path = str(tmpdir.join('failing-build'))
     source = pkg_resources.resource_filename(
         __name__,
@@ -479,7 +478,7 @@ def test_exit_on_failure_but_build_completes(tmpdir):
     tag = repo.head.ref.commit.hexsha[:12]
 
     client_cfg = docker_utils.kwargs_from_env()
-    cli = docker.Client(version='1.18', **client_cfg)
+    cli = docker_client
 
     try:
         with pytest.raises(SystemExit):
@@ -518,7 +517,7 @@ def test_exit_on_failure_but_build_completes(tmpdir):
             cli.remove_image(image, force=True)
 
 
-def test_short_name_target(tmpdir):
+def test_short_name_target(tmpdir, docker_client):
     path = str(tmpdir.join('shipwright-sample'))
     source = pkg_resources.resource_filename(
         __name__,
@@ -528,7 +527,7 @@ def test_short_name_target(tmpdir):
     tag = repo.head.ref.commit.hexsha[:12]
 
     client_cfg = docker_utils.kwargs_from_env()
-    cli = docker.Client(version='1.18', **client_cfg)
+    cli = docker_client
 
     try:
         defaults = get_defaults()
@@ -566,7 +565,7 @@ def test_short_name_target(tmpdir):
             cli.remove_image(image, force=True)
 
 
-def test_child_inherits_parents_build_tag(tmpdir):
+def test_child_inherits_parents_build_tag(tmpdir, docker_client):
     tmp = tmpdir.join('shipwright-sample')
     path = str(tmp)
     source = pkg_resources.resource_filename(
@@ -577,7 +576,7 @@ def test_child_inherits_parents_build_tag(tmpdir):
     old_tag = repo.head.ref.commit.hexsha[:12]
 
     client_cfg = docker_utils.kwargs_from_env()
-    cli = docker.Client(version='1.18', **client_cfg)
+    cli = docker_client
 
     try:
 
@@ -656,6 +655,82 @@ def test_child_inherits_parents_build_tag(tmpdir):
             cli.images(name='shipwright/service1', quiet=True) +
             cli.images(name='shipwright/shared', quiet=True) +
             cli.images(name='shipwright/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+
+def test_build_with_repo_digest(tmpdir, docker_client, registry):
+    path = str(tmpdir.join('shipwright-localhost-sample'))
+    source = pkg_resources.resource_filename(
+        __name__,
+        'examples/shipwright-localhost-sample',
+    )
+    repo = create_repo(path, source)
+    tag = repo.head.ref.commit.hexsha[:12]
+
+    client_cfg = docker_utils.kwargs_from_env()
+    cli = docker_client
+
+    defaults = get_defaults()
+    defaults['push'] = True
+    try:
+        shipw_cli.run(
+            path=path,
+            client_cfg=client_cfg,
+            arguments=defaults,
+            environ={},
+        )
+
+        # Remove a build image:
+        old_images = cli.images(name='localhost:5000/service1')
+        for image in old_images:
+            cli.remove_image(image['Id'], force=True)
+
+        repo_digest = old_images[0]['RepoDigests'][0]
+        # Pull it so it's missing a build tag, but has a RepoDigest
+        cli.pull(repo_digest)
+
+        shipw_cli.run(
+            path=path,
+            client_cfg=client_cfg,
+            arguments=defaults,
+            environ={},
+        )
+
+        service1a, service1b, shared, base = (
+            cli.images(name='localhost:5000/service1') +
+            cli.images(name='localhost:5000/shared') +
+            cli.images(name='localhost:5000/base')
+        )
+
+        if service1b['RepoTags'] is None:
+            service1b, service1a = service1a, service1b
+
+        assert service1a['RepoTags'] is None
+
+        assert set(service1b['RepoTags']) == {
+            'localhost:5000/service1:master',
+            'localhost:5000/service1:latest',
+            'localhost:5000/service1:' + tag,
+        }
+
+        assert set(shared['RepoTags']) == {
+            'localhost:5000/shared:master',
+            'localhost:5000/shared:latest',
+            'localhost:5000/shared:' + tag,
+        }
+
+        assert set(base['RepoTags']) == {
+            'localhost:5000/base:master',
+            'localhost:5000/base:latest',
+            'localhost:5000/base:' + tag,
+        }
+    finally:
+        old_images = (
+            cli.images(name='localhost:5000/service1', quiet=True) +
+            cli.images(name='localhost:5000/shared', quiet=True) +
+            cli.images(name='localhost:5000/base', quiet=True)
         )
         for image in old_images:
             cli.remove_image(image, force=True)
