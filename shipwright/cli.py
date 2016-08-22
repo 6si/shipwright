@@ -109,6 +109,11 @@ def argparser():
         help='Build working tree, including uncommited and untracked changes',
         action='store_true',
     )
+    common.add_argument(
+        '--pull-cache',
+        help='When building try to pull previously built images',
+        action='store_true',
+    )
     a_arg(
         common, '-d', '--dependants',
         help='Build DEPENDANTS and all its dependants',
@@ -157,7 +162,6 @@ def old_style_arg_dict(namespace):
         '--exclude': _flatten(ns.exclude),
         '--help': False,
         '--no-build': getattr(ns, 'no_build', False),
-        '--dirty': getattr(ns, 'dirty', False),
         '--upto': _flatten(ns.upto),
         '--x-assert-hostname': ns.x_assert_hostname,
         '-H': ns.docker_host,
@@ -237,8 +241,10 @@ def run(path, arguments, client_cfg, environ, new_style_args=None):
 
     if new_style_args is None:
         dirty = False
+        pull_cache = False
     else:
         dirty = new_style_args.dirty
+        pull_cache = new_style_args.pull_cache
 
     namespace = config['namespace']
     name_map = config.get('names', {})
@@ -249,7 +255,7 @@ def run(path, arguments, client_cfg, environ, new_style_args=None):
             'to commit these changes, re-run with the --dirty flag.'
         )
 
-    sw = Shipwright(scm, client, arguments['tags'])
+    sw = Shipwright(scm, client, arguments['tags'], pull_cache)
     command = getattr(sw, command_name)
 
     show_progress = sys.stdout.isatty()

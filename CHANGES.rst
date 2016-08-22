@@ -1,7 +1,8 @@
 0.5.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Add --pull-cache to pull images from repository before building.
+  (`Issue #49 <https://github.com/6si/shipwright/issues/49>`_).
 
 
 0.5.0 (2016-08-19)

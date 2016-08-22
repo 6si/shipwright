@@ -4,10 +4,11 @@ from . import build, dependencies, docker, push
 
 
 class Shipwright(object):
-    def __init__(self, source_control, docker_client, tags):
+    def __init__(self, source_control, docker_client, tags, pull_cache=False):
         self.source_control = source_control
         self.docker_client = docker_client
         self.tags = tags
+        self._pull_cache = pull_cache
 
     def targets(self):
         return self.source_control.targets()
@@ -18,7 +19,10 @@ class Shipwright(object):
         return self._build(this_ref_str, targets)
 
     def _build(self, this_ref_str, targets):
-        for evt in build.do_build(self.docker_client, this_ref_str, targets):
+        client = self.docker_client
+        pull_cache = self._pull_cache
+        ref = this_ref_str
+        for evt in build.do_build(client, ref, targets, pull_cache):
             yield evt
 
         # now that we're built and tagged all the images.
