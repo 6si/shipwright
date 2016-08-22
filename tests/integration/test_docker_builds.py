@@ -12,7 +12,7 @@ from .utils import commit_untracked, create_repo, get_defaults
 
 
 def default_args():
-    return argparse.Namespace(dirty=False)
+    return argparse.Namespace(dirty=False, pull_cache=False)
 
 
 def test_sample(tmpdir, docker_client):
@@ -710,6 +710,88 @@ def test_build_with_repo_digest(tmpdir, docker_client, registry):
         assert service1a['RepoTags'] is None
 
         assert set(service1b['RepoTags']) == {
+            'localhost:5000/service1:master',
+            'localhost:5000/service1:latest',
+            'localhost:5000/service1:' + tag,
+        }
+
+        assert set(shared['RepoTags']) == {
+            'localhost:5000/shared:master',
+            'localhost:5000/shared:latest',
+            'localhost:5000/shared:' + tag,
+        }
+
+        assert set(base['RepoTags']) == {
+            'localhost:5000/base:master',
+            'localhost:5000/base:latest',
+            'localhost:5000/base:' + tag,
+        }
+    finally:
+        old_images = (
+            cli.images(name='localhost:5000/service1', quiet=True) +
+            cli.images(name='localhost:5000/shared', quiet=True) +
+            cli.images(name='localhost:5000/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+
+def test_docker_buld_pull_cache(tmpdir, docker_client, registry):
+    path = str(tmpdir.join('shipwright-localhost-sample'))
+    source = pkg_resources.resource_filename(
+        __name__,
+        'examples/shipwright-localhost-sample',
+    )
+    repo = create_repo(path, source)
+    tag = repo.head.ref.commit.hexsha[:12]
+
+    client_cfg = docker_utils.kwargs_from_env()
+    cli = docker_client
+
+    defaults = get_defaults()
+    defaults['push'] = True
+    try:
+        shipw_cli.run(
+            path=path,
+            client_cfg=client_cfg,
+            arguments=defaults,
+            environ={},
+        )
+
+        # Remove the build images:
+        old_images = (
+            cli.images(name='localhost:5000/service1', quiet=True) +
+            cli.images(name='localhost:5000/shared', quiet=True) +
+            cli.images(name='localhost:5000/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+        images_after_delete = (
+            cli.images(name='localhost:5000/service1') +
+            cli.images(name='localhost:5000/shared') +
+            cli.images(name='localhost:5000/base')
+        )
+        assert images_after_delete == []
+
+        args = default_args()
+        args.pull_cache = True
+
+        shipw_cli.run(
+            path=path,
+            client_cfg=client_cfg,
+            arguments=defaults,
+            environ={},
+            new_style_args=args,
+        )
+
+        service1, shared, base = (
+            cli.images(name='localhost:5000/service1') +
+            cli.images(name='localhost:5000/shared') +
+            cli.images(name='localhost:5000/base')
+        )
+
+        assert set(service1['RepoTags']) == {
             'localhost:5000/service1:master',
             'localhost:5000/service1:latest',
             'localhost:5000/service1:' + tag,
