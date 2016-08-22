@@ -1,4 +1,4 @@
-0.5.1 (unreleased)
+0.6.0 (2016-08-22)
 ------------------
 
 - Add --pull-cache to pull images from repository before building.
