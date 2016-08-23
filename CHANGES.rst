@@ -1,7 +1,8 @@
 0.6.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Also push image target ref so that --pull-cache can pull them.
+  (`Issue #81 <https://github.com/6si/shipwright/pull/81>`_).
 
 
 0.6.1 (2016-08-23)
