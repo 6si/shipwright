@@ -1,4 +1,4 @@
-0.6.2 (unreleased)
+0.6.2 (2016-08-23)
 ------------------
 
 - Also push image target ref so that --pull-cache can pull them.
