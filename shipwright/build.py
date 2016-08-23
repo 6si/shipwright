@@ -75,9 +75,10 @@ def build(client, parent_ref, image, pull_cache):
         for evt in pull_evts:
             event = process_event_(evt)
             if 'error' in event:
+                event['warn'] = event['error']
+                del event['error']
                 failed = True
-            else:
-                yield event
+            yield event
 
         if not failed:
             return

@@ -351,6 +351,8 @@ def switch(rec, show_progress):
 
     elif 'error' in rec:
         return '[ERROR] {0}'.format(rec['errorDetail']['message'])
+    elif 'warn' in rec:
+        return '[WARN] {0}'.format(rec['errorDetail']['message'])
     elif rec['event'] == 'tag':
         fmt = 'Tagging {rec[old_image]} to {rec[repository]}:{rec[tag]}'
         return fmt.format(rec=rec)
