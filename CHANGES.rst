@@ -1,7 +1,8 @@
 0.6.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Warn on --pull-cache errors
+  (`Issue #80 <https://github.com/6si/shipwright/pull/80>`_).
 
 
 0.6.0 (2016-08-22)
