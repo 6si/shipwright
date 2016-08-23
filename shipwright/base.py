@@ -50,10 +50,11 @@ class Shipwright(object):
 
         this_ref_str = self.source_control.this_ref_str()
         tags = self.source_control.default_tags() + self.tags + [this_ref_str]
-        names_and_tags = []
+        names_and_tags = set()
         for image in targets:
+            names_and_tags.add((image.name, image.ref))
             for tag in tags:
-                names_and_tags.append((image.name, tag))
+                names_and_tags.add((image.name, tag))
 
-        for evt in push.do_push(self.docker_client, names_and_tags):
+        for evt in push.do_push(self.docker_client, sorted(names_and_tags)):
             yield evt
