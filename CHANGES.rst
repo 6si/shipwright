@@ -1,4 +1,4 @@
-0.6.1 (unreleased)
+0.6.1 (2016-08-23)
 ------------------
 
 - Warn on --pull-cache errors
