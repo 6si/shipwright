@@ -1,7 +1,8 @@
 0.6.3 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Push images to the registry in parallel.
+  (`Issue #82 <https://github.com/6si/shipwright/pull/82>`_).
 
 
 0.6.2 (2016-08-23)
