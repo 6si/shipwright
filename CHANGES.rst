@@ -1,4 +1,4 @@
-0.6.3 (unreleased)
+0.6.3 (2016-08-24)
 ------------------
 
 - Push images to the registry in parallel.
