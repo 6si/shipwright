@@ -37,6 +37,13 @@ class Shipwright(object):
                     tag,
                 )
 
+    def images(self, build_targets):
+        for target in dependencies.eval(build_targets, self.targets()):
+            yield {
+                'stream': '{t.name}:{t.ref}'.format(t=target),
+                'event': 'log',
+            }
+
     def push(self, build_targets, no_build=False):
         """
         Pushes the latest images to the repository.

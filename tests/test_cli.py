@@ -22,6 +22,7 @@ def get_defaults():
         'TARGET': [],
         'build': False,
         'push': False,
+        'images': False,
         'tags': ['latest'],
     }
 
@@ -95,6 +96,7 @@ def test_args():
         'TARGET': [],
         'build': True,
         'push': False,
+        'images': False,
         'tags': ['foo', 'latest'],
     }
 
@@ -122,6 +124,7 @@ def test_args_2():
         'TARGET': [],
         'build': True,
         'push': False,
+        'images': False,
         'tags': ['foo'],
     }
 
@@ -145,5 +148,6 @@ def test_args_base():
         'TARGET': [],
         'build': True,
         'push': False,
+        'images': False,
         'tags': ['latest'],
     }
