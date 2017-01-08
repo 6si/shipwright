@@ -1,4 +1,4 @@
-0.6.4 (unreleased)
+0.6.4 (2017-01-08)
 ------------------
 
 - Add images command for creating docker save.
