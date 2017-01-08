@@ -140,6 +140,10 @@ def argparser():
         'build', help='builds images', parents=[common],
     )
 
+    subparsers.add_parser(
+        'images', help='lists images to build', parents=[common],
+    )
+
     push = subparsers.add_parser(
         'push', help='pushes built images', parents=[common],
     )
@@ -168,6 +172,7 @@ def old_style_arg_dict(namespace):
         'TARGET': [],
         'build': ns.command == 'build',
         'push': ns.command == 'push',
+        'images': ns.command == 'images',
         'tags': sorted(set(_flatten(ns.tags))) or ['latest'],
     }
 
@@ -212,8 +217,8 @@ def process_arguments(path, arguments, client_cfg, environ):
         tls_config.assert_hostname = assert_hostname
 
     client = docker.Client(version='1.18', **client_cfg)
-    commands = ['build', 'push']
-    command_names = [c for c in commands if arguments[c]]
+    commands = ['build', 'push', 'images']
+    command_names = [c for c in commands if arguments.get(c)]
     command_name = command_names[0] if command_names else 'build'
 
     build_targets = {

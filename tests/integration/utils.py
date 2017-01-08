@@ -21,6 +21,7 @@ def get_defaults():
         'TARGET': [],
         'build': False,
         'push': False,
+        'images': False,
         'tags': ['latest'],
     }
 
