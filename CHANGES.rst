@@ -1,14 +1,14 @@
 0.6.5 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix changelog.
 
 
 0.6.4 (2017-01-08)
 ------------------
 
 - Add images command for creating docker save.
-  (`Issue #82 <https://github.com/6si/shipwright/pull/88>`_).
+  (`Issue #88 <https://github.com/6si/shipwright/pull/88>`_).
 
 
 0.6.3 (2016-08-24)
