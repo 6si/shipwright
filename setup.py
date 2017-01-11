@@ -28,6 +28,7 @@ setup(
     install_requires=[
         'docker-py>=1.8.1, <2.0.0',
         'GitPython>=2.0.5, <3.0.0',
+        'docker-registry-client>=0.5.1, <0.6.0',
     ],
     author_email='scott@6sense.com',
     description=(
@@ -37,7 +38,6 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     platforms='any',
-
     classifiers=[
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
@@ -53,9 +53,6 @@ setup(
         'Operating System :: OS Independent',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    extras_require={
-        'testing': ['nose'],
-    },
     entry_points={
         'console_scripts': [
             'shipwright = shipwright.cli:main',

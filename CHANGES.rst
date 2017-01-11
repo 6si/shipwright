@@ -1,8 +1,9 @@
 0.6.6 (unreleased)
 ------------------
 
-- Nothing changed yet.
-
+- Exprimental --direct-registry cache flag to skip creation of already built
+  images and speed up tagging. Feature not subject to semver.
+  (`Issue #89 <https://github.com/6si/shipwright/pull/89>`_).
 
 0.6.5 (2017-01-08)
 ------------------

@@ -57,13 +57,16 @@ from __future__ import absolute_import, print_function
 import argparse
 import json
 import os
+import re
+import shlex
 import sys
 from itertools import chain, cycle
 
 import docker
+import docker_registry_client as drc
 from docker.utils import kwargs_from_env
 
-from shipwright import source_control
+from shipwright import cache, registry, source_control
 from shipwright.base import Shipwright
 from shipwright.colors import rainbow
 
@@ -114,6 +117,20 @@ def argparser():
         help='When building try to pull previously built images',
         action='store_true',
     )
+    common.add_argument(
+        '--direct-registry',
+        help=(
+            'When pulling cache and pushing tags, talk to a registry directly '
+            'where possible'
+        ),
+        default=[],
+        nargs='*',
+        action='append',
+    )
+    a_arg(
+        common, '--registry-login',
+        help='Add registry to directly access when using --direct-registry',
+    )
     a_arg(
         common, '-d', '--dependants',
         help='Build DEPENDANTS and all its dependants',
@@ -150,6 +167,31 @@ def argparser():
     push.add_argument('--no-build', action='store_true')
 
     return parser
+
+
+def parse_docker_logins(docker_logins):
+    parser = argparse.ArgumentParser(description='--registry-login')
+    parser.add_argument('-u', '--username', nargs='?', help='Username')
+    parser.add_argument('-p', '--password', nargs='?', help='Password')
+    parser.add_argument('server', help='SERVER')
+
+    registries = {}
+    for login in docker_logins:
+        args = shlex.split(re.sub(r'^docker login ', '', login, count=0))
+        ns, _ = parser.parse_known_args(args)
+        server = ns.server
+        if re.match(r'^localhost(:|$)', server):
+            http_server = 'http://' + server
+        else:
+            http_server = 'https://' + server
+
+        registries[ns.server] = {
+            'username': ns.username,
+            'password': ns.password,
+            'server': http_server,
+        }
+
+    return registries
 
 
 def _flatten(items):
@@ -247,9 +289,13 @@ def run(path, arguments, client_cfg, environ, new_style_args=None):
     if new_style_args is None:
         dirty = False
         pull_cache = False
+        direct_registry = False
+        docker_logins = []
     else:
         dirty = new_style_args.dirty
         pull_cache = new_style_args.pull_cache
+        direct_registry = new_style_args.direct_registry
+        docker_logins = new_style_args.docker_login
 
     namespace = config['namespace']
     name_map = config.get('names', {})
@@ -260,7 +306,22 @@ def run(path, arguments, client_cfg, environ, new_style_args=None):
             'to commit these changes, re-run with the --dirty flag.'
         )
 
-    sw = Shipwright(scm, client, arguments['tags'], pull_cache)
+    if direct_registry:
+        registry_config = parse_docker_logins(docker_logins)
+        registries = {}
+        for server, config in registry_config.items():
+            registries[server] = drc.BaseClient(
+                config['server'],
+                username=config['username'],
+                password=config['password'],
+            )
+        the_cache = cache.DirectRegistry(client, registry.Registry(registries))
+    elif pull_cache:
+        the_cache = cache.Cache(client)
+    else:
+        the_cache = cache.NoCache(client)
+
+    sw = Shipwright(scm, client, arguments['tags'], the_cache)
     command = getattr(sw, command_name)
 
     show_progress = sys.stdout.isatty()
@@ -360,6 +421,9 @@ def switch(rec, show_progress):
         return '[WARN] {0}'.format(rec['errorDetail']['message'])
     elif rec['event'] == 'tag':
         fmt = 'Tagging {rec[old_image]} to {rec[repository]}:{rec[tag]}'
+        return fmt.format(rec=rec)
+    elif rec['event'] == 'alias':
+        fmt = 'Fast-aliased {rec[old_image]} to {rec[repository]}:{rec[tag]}'
         return fmt.format(rec=rec)
     elif rec['event'] == 'push' and 'aux' in rec:
         return None

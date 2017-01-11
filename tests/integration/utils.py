@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import argparse
 import shutil
 
 import git
@@ -37,3 +38,12 @@ def create_repo(path, source):
 def commit_untracked(repo, message='WIP'):
     repo.index.add(repo.untracked_files)
     repo.index.commit(message)
+
+
+def default_args():
+    return argparse.Namespace(
+        dirty=False,
+        pull_cache=False,
+        direct_registry=False,
+        docker_login=[],
+    )
