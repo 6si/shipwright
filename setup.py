@@ -20,7 +20,7 @@ history = open('CHANGES.rst').read().replace('.. :changelog:', '')
 
 setup(
     name='shipwright',
-    version='0.6.6.dev0',
+    version='0.6.6.dev3',
     url='https://github.com/6si/shipwright/',
     license='Apache Software License',
     author='Scott Robertson',
@@ -29,6 +29,9 @@ setup(
         'docker-py>=1.8.1, <2.0.0',
         'GitPython>=2.0.5, <3.0.0',
     ],
+    extras_require={
+        'registry': ['docker-registry-client>=0.5.1, <0.6.0'],
+    },
     author_email='scott@6sense.com',
     description=(
         'The right way to build, tag and ship shared Docker images.'
@@ -37,7 +40,6 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     platforms='any',
-
     classifiers=[
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
@@ -53,9 +55,6 @@ setup(
         'Operating System :: OS Independent',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    extras_require={
-        'testing': ['nose'],
-    },
     entry_points={
         'console_scripts': [
             'shipwright = shipwright.cli:main',

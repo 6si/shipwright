@@ -1,18 +1,12 @@
 from __future__ import absolute_import
 
-import argparse
-
 import pkg_resources
 import pytest
 from docker import utils as docker_utils
 
 from shipwright import cli as shipw_cli
 
-from .utils import commit_untracked, create_repo, get_defaults
-
-
-def default_args():
-    return argparse.Namespace(dirty=False, pull_cache=False)
+from .utils import commit_untracked, create_repo, default_args, get_defaults
 
 
 def test_sample(tmpdir, docker_client):
@@ -736,7 +730,7 @@ def test_build_with_repo_digest(tmpdir, docker_client, registry):
             cli.remove_image(image, force=True)
 
 
-def test_docker_buld_pull_cache(tmpdir, docker_client, registry):
+def test_docker_build_pull_cache(tmpdir, docker_client, registry):
     path = str(tmpdir.join('shipwright-localhost-sample'))
     source = pkg_resources.resource_filename(
         __name__,
