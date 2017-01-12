@@ -1,5 +1,5 @@
-0.6.6 (unreleased)
-------------------
+0.6.6.dev0 (2017-01-12)
+-----------------------
 
 - Exprimental --direct-registry cache flag to skip creation of already built
   images and speed up tagging. Feature not subject to semver.
