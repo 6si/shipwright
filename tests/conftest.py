@@ -8,7 +8,7 @@ from docker import utils as docker_utils
 @pytest.fixture(scope='session')
 def docker_client():
     client_cfg = docker_utils.kwargs_from_env()
-    return docker.Client(version='1.21', **client_cfg)
+    return docker.APIClient(version='1.21', **client_cfg)
 
 
 @pytest.yield_fixture(scope='session')
