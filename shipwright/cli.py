@@ -251,7 +251,7 @@ def process_arguments(path, arguments, client_cfg, environ):
     if tls_config is not None:
         tls_config.assert_hostname = assert_hostname
 
-    client = docker.Client(version='1.18', **client_cfg)
+    client = docker.APIClient(version='1.18', **client_cfg)
     commands = ['build', 'push', 'images']
     command_names = [c for c in commands if arguments.get(c)]
     command_name = command_names[0] if command_names else 'build'

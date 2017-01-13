@@ -26,7 +26,7 @@ setup(
     author='Scott Robertson',
     tests_require=['nose'],
     install_requires=[
-        'docker-py>=1.8.1, <2.0.0',
+        'docker>=2.0.1, <3.0.0',
         'GitPython>=2.0.5, <3.0.0',
     ],
     extras_require={

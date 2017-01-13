@@ -1,7 +1,8 @@
 0.6.7 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Depend on docker>=2.0.1.
+  (`Issue #91 <https://github.com/6si/shipwright/pull/91>`_).
 
 
 0.6.6 (2017-01-13)
