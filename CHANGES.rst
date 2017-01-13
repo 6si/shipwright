@@ -1,7 +1,8 @@
 0.6.6 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Rate limit push requests
+  (`Issue #84 <https://github.com/6si/shipwright/pull/84>`_).
 
 
 0.6.5 (2017-01-08)

@@ -5,10 +5,24 @@ import itertools
 from . import compat
 
 
+def chunks(iterable, chunk_size):
+    result = []
+    for item in iterable:
+        result.append(item)
+        if len(result) == chunk_size:
+            yield result
+            result = []
+    if len(result) > 0:
+        yield result
+
+
 def do_push(client, images):
-    push_results = [push(client, image) for image in images]
-    for evt in itertools.chain.from_iterable(push_results):
-        yield evt
+    # Docker seems to limit us to about 20 requests in one go.
+    for image_chunk in chunks(images, 20):
+        push_results = [push(client, image) for image in image_chunk]
+
+        for evt in itertools.chain.from_iterable(push_results):
+            yield evt
 
 
 def push(client, image_tag):
