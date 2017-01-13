@@ -1,4 +1,4 @@
-0.6.6 (unreleased)
+0.6.6 (2017-01-13)
 ------------------
 
 - Exprimental --registry-login cache flag to skip creation of already built
