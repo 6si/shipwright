@@ -1,5 +1,8 @@
 from __future__ import absolute_import
 
+import sys
+import traceback
+
 from requests import exceptions as requests_exceptions
 
 from . import compat, docker, push
@@ -90,8 +93,9 @@ class DirectRegistry(NoCache):
         name, ref = tag
         try:
             self.drc.put_manifest(name, ref, manifest)
-        except requests_exceptions.HTTPError as e:
-            yield {'error': e}
+        except requests_exceptions.HTTPError:
+            msg = traceback.format_exception(*sys.exc_info())
+            yield {'error': {'errorDetails': {'message': msg}}}
         else:
             yield {}
 

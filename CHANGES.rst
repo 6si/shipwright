@@ -1,7 +1,8 @@
 0.7.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Add proper stack traces for direct registry errors.
+  (`Issue #93 <https://github.com/6si/shipwright/pull/93>`_).
 
 
 0.7.0 (2017-01-13)
