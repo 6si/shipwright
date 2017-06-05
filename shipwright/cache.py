@@ -3,9 +3,19 @@ from __future__ import absolute_import
 import sys
 import traceback
 
+from docker import errors as d_errors
 from requests import exceptions as requests_exceptions
 
 from . import compat, docker, push
+
+
+def pull(client, *args, **kwargs):
+    try:
+        for evt in client.pull(*args, **kwargs):
+            yield compat.json_loads(evt)
+    except d_errors.NotFound as e:
+        yield {'error': e.explanation,
+               'errorDetail': {'message': e.explanation}}
 
 
 class CacheMissException(Exception):
@@ -51,15 +61,15 @@ class NoCache(object):
 class Cache(NoCache):
     def pull_cache(self, image):
         client = self.docker_client
-        pull_evts = client.pull(
+        pull_evts = pull(
+            client,
             repository=image.name,
             tag=image.ref,
             stream=True,
         )
 
         failed = False
-        for evt in pull_evts:
-            event = compat.json_loads(evt)
+        for event in pull_evts:
             if 'error' in event:
                 event['warn'] = event['error']
                 del event['error']
