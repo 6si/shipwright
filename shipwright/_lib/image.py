@@ -1,12 +1,16 @@
 from __future__ import absolute_import
 
+import json
 import os
+import re
 from collections import namedtuple
 
 Image = namedtuple(
     'Image',
-    ['name', 'dir_path', 'path', 'parent', 'short_name'],
+    ['name', 'dir_path', 'path', 'parent', 'short_name', 'copy_paths'],
 )
+
+JSONDecodeError = getattr(json, 'JSONDecodeError', ValueError)
 
 
 def list_images(namespace, name_map, root_path):
@@ -17,6 +21,7 @@ def list_images(namespace, name_map, root_path):
             name=name,
             short_name=short_name,
             dir_path=os.path.dirname(path),
+            copy_paths=copy_paths(path),
             path=path,
             parent=parent(path),
         ))
@@ -113,6 +118,62 @@ def name(docker_path):
         )
 
     return os.path.basename(os.path.dirname(docker_path)) + after
+
+
+def sub_if(ex, repl, string, flags):
+    """
+    Attempt a substitutuion and return the substituted string if there were
+    matches.
+    """
+    res = re.sub(ex, repl, string, count=1, flags=flags)
+    if res != string:
+        return res
+
+
+def parse_copy(cmd):
+    """
+    Parse the source directoreis from a docker COPY or ADD command
+
+    Ignores http or ftp URLs in ADD commands
+    """
+    copy = sub_if(r'^\s*(COPY)\s', '', cmd, re.I)
+    add = sub_if(r'^\s*(ADD)\s', '', cmd, re.I)
+
+    copy_cmd = copy or add
+    if not copy_cmd:
+        return []
+
+    try:
+        result = json.loads(copy_cmd)
+    except JSONDecodeError:
+        result = None
+
+    if not isinstance(result, list):
+        result = copy_cmd.split(' ')
+
+    paths = result[:-1]
+    if not add:
+        return paths
+
+    return [p for p in paths if not re.match('(https?|ftp):', p, re.I)]
+
+
+def copy_paths(docker_path):
+    dirname = os.path.dirname(docker_path)
+
+    def join(path):
+        return os.path.join(dirname, path)
+
+    def copy_paths_gen():
+        yield docker_path
+        yield join('.dockerignore')
+
+        with open(docker_path) as f:
+            for l in f:
+                for p in parse_copy(l):
+                    yield os.path.normpath(join(p))
+
+    return frozenset(copy_paths_gen())
 
 
 def parent(docker_path):

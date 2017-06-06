@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import json
+
 import pkg_resources
 import pytest
 from docker import utils as docker_utils
@@ -189,6 +191,86 @@ def test_clean_tree_avoids_rebuild(tmpdir, docker_client):
             cli.images(name='shipwright/service1', quiet=True) +
             cli.images(name='shipwright/shared', quiet=True) +
             cli.images(name='shipwright/base', quiet=True)
+        )
+        for image in old_images:
+            cli.remove_image(image, force=True)
+
+
+def test_clean_tree_calcualted_via_copy_cmd_parsing(tmpdir, docker_client):
+    tmp = tmpdir.join('shipwright-sample')
+    path = str(tmp)
+    repo = create_repo(path)
+    tmp.join('.shipwright.json').write(json.dumps({
+        'version': 1.0,
+        'namespace': 'shipwright',
+    }))
+    fe = tmp.ensure('frontend', dir=True)
+    fe.join('yarn.lock').write('FAKE YARN LOCK!\n', 'a')
+    fe.join('Dockerfile-base').write('FROM busybox\n', 'a')
+    fe.join('Dockerfile-base').write('COPY yarn.lock /yarn.lock\n', 'a')
+    fe.join('src.js').write("var $ = require('jquery')\n", 'a')
+    fe.join('Dockerfile').write('FROM shipwright/frontend-base\n', 'a')
+    fe.join('Dockerfile').write('COPY src.js /src.js\n', 'a')
+    commit_untracked(repo)
+    old_tag = repo.head.ref.commit.hexsha[:12]
+
+    client_cfg = docker_utils.kwargs_from_env()
+    cli = docker_client
+
+    try:
+
+        shipw_cli.run(
+            path=path,
+            client_cfg=client_cfg,
+            arguments=get_defaults(),
+            environ={},
+        )
+
+        fe = tmp.join('frontend/src.js')
+        fe.write("'import react from 'react';")
+        repo.index.add([str(fe)])
+        commit_untracked(repo)
+        new_tag = repo.head.ref.commit.hexsha[:12]
+
+        shipw_cli.run(
+            path=path,
+            client_cfg=client_cfg,
+            arguments=get_defaults(),
+            environ={},
+        )
+
+        frontend_a, frontend_b, frontend_base = (
+            cli.images(name='shipwright/frontend') +
+            cli.images(name='shipwright/frontend-base')
+        )
+
+        frontend_a, frontend_b = sorted(
+            (frontend_a, frontend_b),
+            key=lambda x: len(x['RepoTags']),
+            reverse=True,
+        )
+
+        assert set(frontend_a['RepoTags']) == {
+            'shipwright/frontend:master',
+            'shipwright/frontend:latest',
+            'shipwright/frontend:' + new_tag,
+        }
+
+        assert set(frontend_b['RepoTags']) == {
+            'shipwright/frontend:' + old_tag,
+        }
+
+        assert set(frontend_base['RepoTags']) == {
+            'shipwright/frontend-base:master',
+            'shipwright/frontend-base:latest',
+            'shipwright/frontend-base:' + old_tag,
+            'shipwright/frontend-base:' + new_tag,
+        }
+
+    finally:
+        old_images = (
+            cli.images(name='shipwright/frontend', quiet=True) +
+            cli.images(name='shipwright/frontend-base', quiet=True)
         )
         for image in old_images:
             cli.remove_image(image, force=True)

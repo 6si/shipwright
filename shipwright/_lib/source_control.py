@@ -1,8 +1,10 @@
 from __future__ import absolute_import
 
 import binascii
+import fnmatch
 import hashlib
 import os.path
+import re
 from collections import namedtuple
 
 import git
@@ -95,7 +97,18 @@ def _abspath(repo_wd, path):
 def _in_paths(repo_wd, base_paths, path):
     wd = repo_wd
     p = _abspath(repo_wd, path)
-    return any(p.startswith(_abspath(wd, bp) + os.sep) for bp in base_paths)
+
+    for base_path in base_paths:
+        path_pattern = _abspath(wd, base_path)
+        if not re.match('[*?]', path_pattern):
+            if p == path_pattern:
+                return True
+            extra = '*' if path_pattern.endswith(os.sep) else os.sep + '*'
+            path_pattern += extra
+
+        if fnmatch.fnmatch(p, path_pattern):
+            return True
+    return False
 
 
 def _dirty_suffix(repo, base_paths=['.']):
@@ -162,7 +175,9 @@ class GitSourceControl(SourceControl):
         targets = []
 
         for c in images:
-            paths = [p.dir_path for p in _image_parents(c_index, c)]
+            paths = sorted(frozenset.union(
+                *(p.copy_paths for p in _image_parents(c_index, c))
+            ))
             ref = (_hexsha(_last_commit(repo, paths)) +
                    _dirty_suffix(repo, paths))
             targets.append(Target(image=c, ref=ref, children=None))
