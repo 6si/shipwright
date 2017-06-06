@@ -6,6 +6,7 @@ from shipwright import cli
 def switch(event):
     return cli.switch(event, True)
 
+
 aux = {
     u'aux': {
         u'Digest': u'sha256:redacted',

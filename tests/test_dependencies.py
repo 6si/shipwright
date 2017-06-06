@@ -17,6 +17,7 @@ def target(name, dir_path, path, parent):
         'abc', None,
     )
 
+
 targets = [
     target(
         'shipwright_test/2', 'path2/', 'path2/Dockerfile',

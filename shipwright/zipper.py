@@ -8,6 +8,7 @@ Path = namedtuple('Path', 'l, r, pnodes, ppath, changed')
 def zipper(root, is_branch, children, make_node):
     return Loc(root, None, is_branch, children, make_node)
 
+
 _Loc = namedtuple(
     'Loc',
     ['current', 'path', 'is_branch', 'get_children', 'make_node'],
@@ -51,7 +52,7 @@ class Loc(_Loc):
                 pnode = pnodes[-1]
                 if changed:
                     return self._replace(
-                        current=self.make_node(pnode, l+(self.current,)+r),
+                        current=self.make_node(pnode, l + (self.current,) + r),
                         path=ppath and ppath._replace(changed=True),
                     )
                 else:
@@ -68,7 +69,7 @@ class Loc(_Loc):
             l, rs = self.path[:2]
             current, rnext = rs[0], rs[1:]
             return self._replace(current=current, path=self.path._replace(
-                l=l+(self.current,),
+                l=l + (self.current,),
                 r=rnext,
             ))
 
@@ -205,5 +206,6 @@ class Loc(_Loc):
                 current=self.make_node(pnodes[-1], r),
                 path=ppath and ppath._replace(changed=True),
             )
+
 
 del _Loc

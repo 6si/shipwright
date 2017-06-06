@@ -378,6 +378,7 @@ def pretty_event(evt, show_progress):
     )
     return prettify(formatted_message)
 
+
 colors = cycle(rainbow())
 
 
