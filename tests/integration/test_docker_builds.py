@@ -336,7 +336,7 @@ def test_exclude(tmpdir, docker_client):
             environ={},
         )
 
-        base,  = (
+        base, = (
             cli.images(name='shipwright/service1') +
             cli.images(name='shipwright/shared') +
             cli.images(name='shipwright/base')
@@ -376,7 +376,7 @@ def test_exact(tmpdir, docker_client):
             environ={},
         )
 
-        base,  = (
+        base, = (
             cli.images(name='shipwright/service1') +
             cli.images(name='shipwright/shared') +
             cli.images(name='shipwright/base')
