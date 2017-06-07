@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import tarfile
 
-from shipwright import tar
+from shipwright._lib import tar
 
 
 def test_mkcontext(tmpdir):

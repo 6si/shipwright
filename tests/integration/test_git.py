@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import pkg_resources
 import pytest
 
-from shipwright import source_control
+from shipwright._lib import source_control
 
 from .utils import commit_untracked, create_repo
 

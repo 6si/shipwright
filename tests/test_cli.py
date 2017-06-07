@@ -4,7 +4,7 @@ import git
 import pytest
 from docker import tls
 
-from shipwright import cli
+from shipwright._lib import cli
 
 
 def get_defaults():

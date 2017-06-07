@@ -57,7 +57,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'shipwright = shipwright.cli:main',
+            'shipwright = shipwright._lib.cli:main',
         ],
     },
 )

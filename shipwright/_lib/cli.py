@@ -65,9 +65,9 @@ from itertools import chain, cycle
 import docker
 from docker.utils import kwargs_from_env
 
-from shipwright import cache, registry, source_control
-from shipwright.base import Shipwright
-from shipwright.colors import rainbow
+from . import cache, registry, source_control
+from .base import Shipwright
+from .colors import rainbow
 
 try:
     import docker_registry_client as drc

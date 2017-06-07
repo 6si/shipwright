@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from shipwright import cli
+from shipwright._lib import cli
 
 
 def switch(event):
