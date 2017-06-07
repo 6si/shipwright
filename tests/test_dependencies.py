@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from shipwright import dependencies, image, source_control
+from shipwright._lib import dependencies, image, source_control
 
 
 def names_list(targets):

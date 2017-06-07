@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import pkg_resources
 from docker import utils as docker_utils
 
-from shipwright import cli as shipw_cli
+from shipwright._lib import cli as shipw_cli
 
 from .utils import commit_untracked, create_repo, default_args, get_defaults
 
