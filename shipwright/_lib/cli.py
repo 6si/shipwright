@@ -290,7 +290,7 @@ def run(path, arguments, client_cfg, environ, new_style_args=None):
 
     namespace = config['namespace']
     name_map = config.get('names', {})
-    scm = source_control.GitSourceControl(path, namespace, name_map)
+    scm = source_control.source_control(path, namespace, name_map)
     if not dirty and scm.is_dirty():
         return (
             'Aborting build, due to uncommitted changes. If you are not ready '

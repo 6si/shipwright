@@ -10,6 +10,26 @@ import git
 from . import image
 
 
+class Mode(object):
+    pass
+
+
+AUTO = Mode()
+GIT = Mode()
+
+
+SOURCE_CONTROL = [
+    ('.git', GIT),
+]
+
+
+class SourceControlNotFound(Exception):
+    def __init__(self):
+        possible_values = ', '.join([x for x, _ in SOURCE_CONTROL])
+        msg = 'Cannot find directory in {}'.format(possible_values)
+        super(SourceControlNotFound, self).__init__(msg)
+
+
 def _last_commit(repo, paths):
     commits = repo.iter_commits(
         paths=paths,
@@ -101,7 +121,13 @@ def _dirty_suffix(repo, base_paths=['.']):
     return '-dirty-' + binascii.hexlify(digest.digest())[:12].decode('utf-8')
 
 
-class GitSourceControl(object):
+class SourceControl(object):
+    pass
+
+
+class GitSourceControl(SourceControl):
+    mode = GIT
+
     def __init__(self, path, namespace, name_map):
         self.path = path
         self._namespace = namespace
@@ -142,3 +168,20 @@ class GitSourceControl(object):
             targets.append(Target(image=c, ref=ref, children=None))
 
         return targets
+
+
+def get_mode(path):
+    for scm_dir, mode in SOURCE_CONTROL:
+        if os.path.isdir(os.path.join(path, scm_dir)):
+            return mode
+    raise SourceControlNotFound()
+
+
+def source_control(path, namespace, name_map, mode=None):
+    if mode is None:
+        mode = AUTO
+    assert isinstance(mode, Mode)
+    the_mode = mode if mode is not AUTO else get_mode(path)
+    for cls in SourceControl.__subclasses__():
+        if cls.mode is the_mode:
+            return cls(path, namespace, name_map)
