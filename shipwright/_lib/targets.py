@@ -6,7 +6,7 @@ import os
 from . import dependencies, source_control
 
 
-def targets(path='', upto=None, tags=None, mode=None):
+def targets(path='.', upto=None, tags=None, mode=None):
     if upto is None:
         upto = []
     try:
