@@ -1,4 +1,4 @@
-0.7.1 (unreleased)
+0.8.0 (2017-06-08)
 ------------------
 
 - Add proper stack traces for direct registry errors.
