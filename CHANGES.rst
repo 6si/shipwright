@@ -8,6 +8,9 @@
 - Mark every internal package as private to allow exporting
   of select parts of shipwright publicly.
   (`Issue #99 <https://github.com/6si/shipwright/pull/99>`_).
+- Create shipwright.targets.targets function to list available
+  docker targets in a repo programaticaly.
+  (`Issue #100 <https://github.com/6si/shipwright/pull/100>`_).
 
 
 0.7.0 (2017-01-13)
