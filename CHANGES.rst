@@ -3,6 +3,11 @@
 
 - Add proper stack traces for direct registry errors.
   (`Issue #93 <https://github.com/6si/shipwright/pull/93>`_).
+- Handle differences between docker over TCP and Unix socket.
+  (`Issue #96 <https://github.com/6si/shipwright/pull/96>`_).
+- Mark every internal package as private to allow exporting
+  of select parts of shipwright publicly.
+  (`Issue #99 <https://github.com/6si/shipwright/pull/99>`_).
 
 
 0.7.0 (2017-01-13)
