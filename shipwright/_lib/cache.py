@@ -1,12 +1,13 @@
 from __future__ import absolute_import
 
+import os
 import sys
 import traceback
 
 from docker import errors as d_errors
 from requests import exceptions as requests_exceptions
 
-from . import compat, docker, push
+from . import compat, docker, push, tar
 
 
 def pull(client, *args, **kwargs):
@@ -18,15 +19,23 @@ def pull(client, *args, **kwargs):
                'errorDetail': {'message': e.explanation}}
 
 
+class PullFailedException(Exception):
+    pass
+
+
 class CacheMissException(Exception):
     pass
+
+
+_FAILED = object()
 
 
 class NoCache(object):
     def __init__(self, docker_client):
         self.docker_client = docker_client
+        self._pulled_images = {}
 
-    def pull_cache(self, image):
+    def _pull_cache(self, image):
         raise CacheMissException()
         yield
 
@@ -57,18 +66,59 @@ class NoCache(object):
         for evt in push.do_push(self.docker_client, sorted(names_and_tags)):
             yield evt
 
-
-class Cache(NoCache):
-    def pull_cache(self, image):
+    def build(self, parent_ref, image):
+        repo = image.name
+        tag = image.ref
         client = self.docker_client
-        pull_evts = pull(
-            client,
-            repository=image.name,
-            tag=image.ref,
+
+        try:
+            for evt in self._pull_cache(image):
+                yield evt
+        except CacheMissException:
+            pass
+        else:
+            return
+
+        # pull the parent if it has not been built because Docker-py fails
+        # to send the correct credentials in the build command.
+        if parent_ref:
+            try:
+                for evt in self._pull(image.parent, parent_ref):
+                    yield evt
+            except PullFailedException:
+                pass
+
+        build_evts = client.build(
+            fileobj=tar.mkcontext(parent_ref, image.path),
+            rm=True,
+            custom_context=True,
             stream=True,
+            tag='{0}:{1}'.format(image.name, image.ref),
+            dockerfile=os.path.basename(image.path),
         )
 
+        for evt in build_evts:
+            yield compat.json_loads(evt)
+
+        self._pulled_images[(repo, tag)] = True
+
+    def _pull(self, repo, tag):
+        already_pulled = self._pulled_images.get((repo, tag), False)
+        if already_pulled is _FAILED:
+            raise PullFailedException()
+
+        if already_pulled:
+            return
+
+        client = self.docker_client
+
         failed = False
+        pull_evts = pull(
+            client,
+            repository=repo,
+            tag=tag,
+            stream=True,
+        )
         for event in pull_evts:
             if 'error' in event:
                 event['warn'] = event['error']
@@ -77,6 +127,19 @@ class Cache(NoCache):
             yield event
 
         if failed:
+            self._pulled_images[(repo, tag)] = _FAILED
+            raise PullFailedException()
+
+        self._pulled_images[(repo, tag)] = True
+
+
+class Cache(NoCache):
+    def _pull_cache(self, image):
+        pull_events = self._pull(repo=image.name, tag=image.ref)
+        try:
+            for evt in pull_events:
+                yield evt
+        except PullFailedException:
             raise CacheMissException()
 
 
@@ -109,7 +172,7 @@ class DirectRegistry(NoCache):
         else:
             yield {}
 
-    def pull_cache(self, image):
+    def _pull_cache(self, image):
         tag = (image.name, image.ref)
         if self._get_manifest(tag) is None:
             raise CacheMissException()

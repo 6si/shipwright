@@ -1,7 +1,9 @@
 0.9.0a2 (unreleased)
 --------------------
 
-- Nothing changed yet.
+- Pull parent images before build to avoid problems with
+  docker-py build not sending credentials.
+  (`Issue #102 <https://github.com/6si/shipwright/pull/102>`_).
 
 
 0.9.0a1 (2017-06-12)

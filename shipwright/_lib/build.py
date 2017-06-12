@@ -1,12 +1,7 @@
 from __future__ import absolute_import
 
-import os
-
 from . import docker
-from .cache import CacheMissException
-from .compat import json_loads
 from .msg import BuildComplete
-from .tar import mkcontext
 
 
 def _merge(d1, d2):
@@ -66,22 +61,5 @@ def build(client, parent_ref, image, cache):
     if image.ref in built_tags:
         return
 
-    try:
-        for evt in cache.pull_cache(image):
-            yield process_event_(evt)
-    except CacheMissException:
-        pass
-    else:
-        return
-
-    build_evts = client.build(
-        fileobj=mkcontext(parent_ref, image.path),
-        rm=True,
-        custom_context=True,
-        stream=True,
-        tag='{0}:{1}'.format(image.name, image.ref),
-        dockerfile=os.path.basename(image.path),
-    )
-
-    for evt in build_evts:
-        yield process_event_(json_loads(evt))
+    for evt in cache.build(parent_ref, image):
+        yield process_event_(evt)
