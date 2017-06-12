@@ -69,6 +69,7 @@ from docker.utils import kwargs_from_env
 from . import cache, registry, source_control
 from .base import Shipwright
 from .colors import rainbow
+from .msg import Message
 
 try:
     import docker_registry_client as drc
@@ -337,6 +338,8 @@ def run(path, arguments, client_cfg, environ, new_style_args=None):
         events = command(build_targets)
 
     for event in events:
+        if isinstance(event, Message):
+            continue
         if dump_file:
             json.dump(event, dump_file, cls=SetJSONEncoder)
             dump_file.write('\n')

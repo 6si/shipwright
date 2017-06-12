@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 from . import build, dependencies
+from .msg import BuildComplete
 
 
 class Shipwright(object):
@@ -21,14 +22,12 @@ class Shipwright(object):
     def _build(self, this_ref_str, targets):
         client = self.docker_client
         ref = this_ref_str
-        for evt in build.do_build(client, ref, targets, self._cache):
-            yield evt
-
-        # now that we're built and tagged all the images.
-        # (either during the process of building or forwarding the tag)
-        # tag all images with the human readable tags.
         tags = self.source_control.default_tags() + self.tags + [this_ref_str]
-        for evt in self._cache.tag(targets, tags):
+        for evt in build.do_build(client, ref, targets, self._cache):
+            if isinstance(evt, BuildComplete):
+                target = evt.target
+                for tag_evt in self._cache.tag([target], tags):
+                    yield tag_evt
             yield evt
 
     def images(self, build_targets):
@@ -44,12 +43,15 @@ class Shipwright(object):
         """
         targets = dependencies.eval(build_targets, self.targets())
         this_ref_str = self.source_control.this_ref_str()
-
-        if not no_build:
-            for evt in self._build(this_ref_str, targets):
-                yield evt
-
-        this_ref_str = self.source_control.this_ref_str()
         tags = self.source_control.default_tags() + self.tags + [this_ref_str]
-        for evt in self._cache.push(targets, tags):
+
+        if no_build:
+            for evt in self._cache.push(targets, tags):
+                yield evt
+            return
+
+        for evt in self._build(this_ref_str, targets):
+            if isinstance(evt, BuildComplete):
+                for push_evt in self._cache.push([evt.target], tags):
+                    yield push_evt
             yield evt

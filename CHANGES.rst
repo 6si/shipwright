@@ -1,7 +1,8 @@
 0.9.0a1 (unreleased)
 --------------------
 
-- Nothing changed yet.
+- Push and tag images as soon as they are built.
+  (`Issue #101 <https://github.com/6si/shipwright/pull/101>`_).
 
 
 0.9.0-alpha (2017-06-12)
