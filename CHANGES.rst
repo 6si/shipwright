@@ -8,7 +8,7 @@
 ------------------------
 
 - Base the cache key on the globs in Docker COPY/ADD commands.
-  (`Issues #98 <https://github.com/6si/shipwright/pull/98>`_).
+  (`Issue #98 <https://github.com/6si/shipwright/pull/98>`_).
 
 
 0.8.0 (2017-06-08)
