@@ -1,4 +1,4 @@
-0.9.0a1 (unreleased)
+0.9.0a1 (2017-06-12)
 --------------------
 
 - Push and tag images as soon as they are built.
