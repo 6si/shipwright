@@ -5,6 +5,7 @@ import os
 from . import docker
 from .cache import CacheMissException
 from .compat import json_loads
+from .msg import BuildComplete
 from .tar import mkcontext
 
 
@@ -42,6 +43,7 @@ def do_build(client, build_ref, targets, cache):
             parent_ref = build_index.get(target.parent)
         for evt in build(client, parent_ref, target, cache):
             yield evt
+        yield BuildComplete(target)
 
 
 def build(client, parent_ref, image, cache):
