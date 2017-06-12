@@ -1,4 +1,4 @@
-0.9.0a2 (unreleased)
+0.9.0a2 (2017-06-12)
 --------------------
 
 - Pull parent images before build to avoid problems with
