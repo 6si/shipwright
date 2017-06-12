@@ -1,5 +1,5 @@
-0.8.1 (unreleased)
-------------------
+0.9.0-alpha (2017-06-12)
+------------------------
 
 - Base the cache key on the globs in Docker COPY/ADD commands.
   (`Issues #98 <https://github.com/6si/shipwright/pull/98>`_).
