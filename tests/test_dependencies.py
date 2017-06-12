@@ -13,7 +13,7 @@ def _names(tree):
 
 def target(name, dir_path, path, parent):
     return source_control.Target(
-        image.Image(name, dir_path, path, parent, name),
+        image.Image(name, dir_path, path, parent, name, frozenset([path])),
         'abc', None,
     )
 

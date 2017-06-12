@@ -55,6 +55,7 @@ Examples:
 from __future__ import absolute_import, print_function
 
 import argparse
+import collections
 import json
 import os
 import re
@@ -273,6 +274,13 @@ def process_arguments(path, arguments, client_cfg, environ):
     return build_targets, no_build, command_name, dump_file, config, client
 
 
+class SetJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, collections.Set):
+            return sorted(obj)
+        return super(SetJSONEncoder, self).decode(obj)
+
+
 def run(path, arguments, client_cfg, environ, new_style_args=None):
     args = process_arguments(
         path, arguments, client_cfg, environ,
@@ -330,7 +338,7 @@ def run(path, arguments, client_cfg, environ, new_style_args=None):
 
     for event in events:
         if dump_file:
-            dump_file.write(json.dumps(event))
+            json.dump(event, dump_file, cls=SetJSONEncoder)
             dump_file.write('\n')
         if 'error' in event:
             errors.append(event)

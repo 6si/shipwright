@@ -27,8 +27,9 @@ def get_defaults():
     }
 
 
-def create_repo(path, source):
-    shutil.copytree(source, path)
+def create_repo(path, source=None):
+    if source is not None:
+        shutil.copytree(source, path)
     repo = git.Repo.init(path)
     repo.index.add(repo.untracked_files)
     repo.index.commit('Initial Commit')
