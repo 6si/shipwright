@@ -1,4 +1,4 @@
-0.9.0a3 (unreleased)
+0.9.0a3 (2017-06-13)
 --------------------
 
 - Add better fast-alias error message for missing manifest.
