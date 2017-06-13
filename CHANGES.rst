@@ -3,6 +3,8 @@
 
 - Add better fast-alias error message for missing manifest.
   (`Issue #103 <https://github.com/6si/shipwright/pull/103>`_).
+- Retry on error during docker push.
+  (`Issue #104 <https://github.com/6si/shipwright/pull/104>`_).
 
 0.9.0a2 (2017-06-12)
 --------------------
