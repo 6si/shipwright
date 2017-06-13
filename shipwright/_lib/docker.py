@@ -57,9 +57,20 @@ def tag_image(client, image, new_ref):
         )
     except d_errors.NotFound:
         message = 'Error tagging {}, not found'.format(old_image)
-        evt.update({
-            'error': message,
-            'errorDetail': {'message': message},
-        })
+        evt.update(error(message))
 
     return evt
+
+
+def error(message):
+    return {
+        'error': message,
+        'errorDetail': {'message': message},
+    }
+
+
+def warn(message):
+    return {
+        'warn': message,
+        'errorDetail': {'message': message},
+    }

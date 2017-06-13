@@ -15,8 +15,7 @@ def pull(client, *args, **kwargs):
         for evt in client.pull(*args, **kwargs):
             yield compat.json_loads(evt)
     except d_errors.NotFound as e:
-        yield {'error': e.explanation,
-               'errorDetail': {'message': e.explanation}}
+        yield docker.error(e.explanation)
 
 
 class PullFailedException(Exception):
@@ -166,13 +165,13 @@ class DirectRegistry(NoCache):
         name, ref = tag
         if manifest is None:
             msg = 'manifest does not exist, did the image fail to build?'
-            yield {'error': {'errorDetails': {'message': msg}}}
+            yield docker.error(msg)
             return
         try:
             self.drc.put_manifest(name, ref, manifest)
         except requests_exceptions.HTTPError:
             msg = traceback.format_exception(*sys.exc_info())
-            yield {'error': {'errorDetails': {'message': msg}}}
+            yield docker.error(msg)
         else:
             yield {}
 
