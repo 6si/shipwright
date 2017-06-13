@@ -164,6 +164,10 @@ class DirectRegistry(NoCache):
 
     def _put_manifest(self, tag, manifest):
         name, ref = tag
+        if manifest is None:
+            msg = 'manifest does not exist, did the image fail to build?'
+            yield {'error': {'errorDetails': {'message': msg}}}
+            return
         try:
             self.drc.put_manifest(name, ref, manifest)
         except requests_exceptions.HTTPError:
