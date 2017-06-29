@@ -1,5 +1,5 @@
-0.9.0a4 (unreleased)
---------------------
+0.9.0 (2017-06-29)
+------------------
 
 - Add better fast-alias error message for missing manifest.
   (`Issue #103 <https://github.com/6si/shipwright/pull/103>`_).
