@@ -1,35 +1,15 @@
 0.9.0a4 (unreleased)
 --------------------
 
-- Nothing changed yet.
-
-
-0.9.0a3 (2017-06-13)
---------------------
-
 - Add better fast-alias error message for missing manifest.
   (`Issue #103 <https://github.com/6si/shipwright/pull/103>`_).
 - Retry on error during docker push.
   (`Issue #104 <https://github.com/6si/shipwright/pull/104>`_).
-
-0.9.0a2 (2017-06-12)
---------------------
-
 - Pull parent images before build to avoid problems with
   docker-py build not sending credentials.
   (`Issue #102 <https://github.com/6si/shipwright/pull/102>`_).
-
-
-0.9.0a1 (2017-06-12)
---------------------
-
 - Push and tag images as soon as they are built.
   (`Issue #101 <https://github.com/6si/shipwright/pull/101>`_).
-
-
-0.9.0-alpha (2017-06-12)
-------------------------
-
 - Base the cache key on the globs in Docker COPY/ADD commands.
   (`Issue #98 <https://github.com/6si/shipwright/pull/98>`_).
 
