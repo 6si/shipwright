@@ -1,6 +1,6 @@
 Shipwright builds shared Docker images within a git repository in **the
 right order** and publishes them tagged with git's revision/branch
-information so you'll never loose track of an image's origin.
+information so you'll never lose track of an image's origin.
 
 It's the perfect tool for building and publishing your images to places
 like Docker Hub or your own private registry. Have a look at `our
