@@ -7,6 +7,11 @@ like Docker Hub or your own private registry. Have a look at `our
 motivation <docs/motivation.md>`__ to see why we built it and the pain
 points it solves for you.
 
+Alternatives
+============
+
+See also https://github.com/moby/buildkit
+
 Installation
 ============
 
