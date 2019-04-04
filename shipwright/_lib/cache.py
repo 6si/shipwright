@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import itertools
 import os
 import sys
 import traceback
@@ -27,6 +28,18 @@ class CacheMissException(Exception):
 
 
 _FAILED = object()
+
+
+def as_warning(event):
+    error = event.get('error')
+    if error is None:
+        return event
+
+    else:
+        new_event = event.copy()
+        new_event['warn'] = error
+        del new_event['error']
+        return new_event
 
 
 class NoCache(object):
@@ -120,10 +133,10 @@ class NoCache(object):
         )
         for event in pull_evts:
             if 'error' in event:
-                event['warn'] = event['error']
-                del event['error']
+                yield as_warning(event)
                 failed = True
-            yield event
+            else:
+                yield event
 
         if failed:
             self._pulled_images[(repo, tag)] = _FAILED
@@ -169,9 +182,14 @@ class DirectRegistry(NoCache):
             return
         try:
             self.drc.put_manifest(name, ref, manifest)
-        except requests_exceptions.HTTPError:
+        except requests_exceptions.HTTPError as e:
             msg = traceback.format_exception(*sys.exc_info())
-            yield docker.error(msg)
+            try:
+                msg = msg + '\n' + e.request.content
+            except Exception:
+                msg = msg + '\n' + '<no content>'
+
+            yield as_warning(docker.error(msg))
         else:
             yield {}
 
@@ -191,6 +209,7 @@ class DirectRegistry(NoCache):
         yield
 
     def push(self, targets, tags):
+        client = self.docker_client
         to_push = set()
         to_alias = []
         for image in targets:
@@ -202,12 +221,14 @@ class DirectRegistry(NoCache):
                 to_push.add(tag)
 
         sorted_to_push = sorted(to_push)
-        for evt in push.do_push(self.docker_client, sorted_to_push):
+        for evt in push.do_push(client, sorted_to_push):
             yield evt
 
         for tag in sorted_to_push:
             manifest = self._get_manifest(tag)
             to_alias.append((tag, manifest))
+
+        to_retry = set()
 
         for (name, ref), manifest in to_alias:
             for tag in tags:
@@ -221,3 +242,29 @@ class DirectRegistry(NoCache):
                 for evt in self._put_manifest(dest, manifest):
                     evt.update(extra)
                     yield evt
+                    if 'warn' in evt:
+                        to_retry.add((name, ref, tag))
+
+        def grouper(x):
+            name, ref, _ = x
+            return (name, ref)
+
+        class FakeImage(object):
+            def __init__(self, name, ref):
+                self.image = name
+                self.ref = ref
+
+        if to_retry:
+            cache = Cache(client)
+            s_retry = sorted(to_retry)
+            for (name, ref), grp in itertools.groupby(s_retry, grouper):
+                image = FakeImage(name, ref)
+                for evt in cache._pull_cache(image):
+                    yield evt
+
+                for _, _, tag in grp:
+                    for evt in docker.tag_image(client, image, tag):
+                        yield evt
+
+                    for evt in push.do_push(client, [(name, tag)]):
+                        yield evt
